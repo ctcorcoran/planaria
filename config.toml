@@ -1,0 +1,50 @@
+# Planaria Configuration File
+# Global default settings for the financial planning application
+
+[plan_defaults]
+# Core plan settings
+start_year = 2025
+n_years = 35
+inflation_rate = 0.03
+col_raise_rate = 0.02
+
+[financial_defaults]
+# Asset maintenance rates
+home_maintenance_rate = 0.015
+car_maintenance_rate = 0.1
+
+# Insurance defaults (annual)
+home_insurance = 1500
+car_insurance = 1000
+
+# Pension defaults
+pension_contribution_rate = 0.06
+pension_vesting_years = 5
+pension_final_avg_years = 3
+pension_retirement_age = 65
+pension_asset_multiplier = 25
+
+# Year ranges for inputs
+min_year = 1950
+max_year = 2100
+min_retirement_age = 50
+max_retirement_age = 80
+max_vesting_years = 20
+
+[ui_defaults]
+# Display settings
+default_display_value = "Annual"
+expense_display_default = "Annual"
+income_display_default = "Annual"
+
+# Column layouts
+budget_column_ratio = [0.5, 0.5]
+cash_flow_column_ratio = [0.55, 0.45]
+net_worth_column_ratio = [0.5, 0.5]
+retirement_column_ratio = [0.5, 0.5]
+
+[app_settings]
+# Application settings
+app_title = "Planaria"
+favicon_path = "assets/planaria_icon.ico"
+sidebar_width = 280

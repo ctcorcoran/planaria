@@ -1,0 +1,19 @@
+{"California":{"tax":{
+    "rates":[0.01,0.02,0.04,0.06,0.08,0.093,0.103,0.113,0.123],
+    "brackets":{"single":[10099,23942,37788,52455,66295,338639,406364,677275,"np.inf"],
+                "joint":[20198,46884,75576,104910,132590,677278,812728,1354550,"np.inf"]}},
+"deductions":{
+  "standard_deduction":{"single":5363,"joint":10726},
+  "mortgage_limit":1000000,
+  "property_tax_max":"np.inf",
+  "heloc_limit":100000,
+  "medical_limit_rate":0.075,
+  "charitable_limit_rate":0.5},
+"credits":{
+  "exemption":{"single":140,"joint":280},
+  "child_dep_care_age_limit":13,
+  "child_dep_care_limits":[40000,70000,100000,"np.inf"],
+  "child_dep_care_multipliers":[0.5,0.43,0.34,0],
+  "child_dep_care_max":[3000,6000],
+  "exemption":{"single":144,"joint":288}}
+}}

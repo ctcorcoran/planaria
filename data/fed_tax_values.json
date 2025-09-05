@@ -1,0 +1,28 @@
+{
+"tax_year": 2023,
+"tax": {
+    "social_security_rate": 0.062,
+    "medicare_rate": 0.0145,
+    "rates": [0.1,0.12,0.22,0.24,0.32,0.35,0.37],
+    "brackets": {"single": [11000,44725,95375,182100,231250,578125,"np.inf"],
+                "joint": [22000,89450,190750,364200,462500,693750,"np.inf"]}},
+"deductions": {
+  "401k_limit": 22500,
+  "IRA_limit": 6500,
+  "IRA_phaseout": {"single": [73000,83000],"joint": [116000,136000]},
+  "student_loan_magi_thresh": {"single": 85000,"joint": 175000},
+  "student_loan_max": {"single": 2500,"joint": 2500,"separate": 0},
+  "standard_deduction": {"single": 13850,"joint": 27700},
+  "SALT_max": {"single": 10000,"joint": 10000,"separate": 5000},
+  "mortgage_limit": {"single": 750000,"joint": 750000,"separate": 375000},
+  "medical_limit_rate": 0.075,
+  "charity_limit_rate": 0.6},
+"credits": {
+  "child_max": 2000,
+  "child_limit": {"single": 200000,"joint": 400000},
+  "child_phaseout_rate": 0.05,
+  "child_magi_thresh": {"single": 200000,"joint": 400000},
+  "child_dep_care_limits": [15000,17000,19000,21000,23000,25000,27000,29000,31000,33000,35000,37000,39000,41000,43000,"np.inf"],
+  "child_dep_care_multipliers": [0.35,0.34,0.33,0.32,0.31,0.30,0.29,0.28,0.27,0.26,0.25,0.24,0.23,0.22,0.21,0.20],
+  "child_dep_care_max": [3000,6000]}
+}

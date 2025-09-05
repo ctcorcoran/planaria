@@ -1,0 +1,307 @@
+# PLANARIA CODING STYLE GUIDE
+# Based on analysis of the Planaria financial planning application codebase
+
+## PROJECT STRUCTURE & ORGANIZATION
+
+### Directory Layout
+- `objs/` - Core object classes (Plan, Person, financial objects)
+- `utils/` - Utility functions, generators, plotting, tax functions
+- `pages/` - Streamlit page modules for UI
+- `data/` - Data files (CSV, JSON)
+- `saved_plans/` - User saved plan files
+- `assets/` - Static assets (icons, SVGs)
+
+### File Naming Conventions
+- Use descriptive, lowercase names with underscores
+- Group related functionality in appropriately named files
+- Examples: `financial_objects.py`, `utilities.py`, `plotting.py`
+
+## IMPORT PATTERNS
+
+### Preferred Import Style
+```python
+# Explicit imports with module prefixes (preferred)
+import objs.plan 
+import utils.utilities
+import utils.ui_functions
+
+# Within modules, use relative imports
+from objs.plan import *
+from objs.financial_objects import *
+from utils.utilities import *
+```
+
+### Import Organization
+1. Standard library imports first
+2. Third-party imports (pandas, numpy, streamlit, plotly)
+3. Local application imports last
+4. Group related imports together
+
+## CLASS DESIGN PATTERNS
+
+### Object Structure
+- All classes have consistent base structure:
+  - Static counter for ID generation
+  - `obj_type` attribute for serialization
+  - Unique `id` using pattern: `obj_type + '_' + str(counter)`
+  - Standard attributes with clear naming
+
+### ID Generation Pattern
+```python
+class SomeClass:
+    counter = 0
+    def __init__(self, ...):
+        SomeClass.counter += 1
+        self.obj_type = 'SomeClass'
+        self.id = self.obj_type + '_' + str(SomeClass.counter)
+```
+
+### Inheritance Hierarchy
+- Base classes: `FinObj`, `IncExpObj`
+- Specific implementations: `IncomeObj`, `ExpenseObj`, `AssetObj`, `LiabObj`
+- Clear separation of concerns through inheritance
+
+## NAMING CONVENTIONS
+
+### Variables and Functions
+- **snake_case** for all variables and functions
+- Descriptive, self-documenting names
+- Strategic abbreviations where context is clear:
+  - `infl` for inflation
+  - `col` for cost of living
+  - `amt` for amount
+  - `obj` for object
+
+### Examples of Good Naming
+```python
+infl_rate = 0.03
+col_rate = 0.02
+down_payment_sources = []
+asset_dict = {}
+liab_dict = {}
+```
+
+### Constants and Configuration
+- Use descriptive names for magic numbers
+- Group related constants together
+- Document the purpose of configuration values
+
+## CODE STRUCTURE & FORMATTING
+
+### Indentation and Spacing
+- 4-space indentation (no tabs)
+- Strategic blank lines to separate logical sections
+- Consistent spacing around operators
+
+### Comment Style
+```python
+#####################
+# SECTION HEADERS   #
+#####################
+
+# Single line comments for brief explanations
+# Use descriptive headers for major sections
+```
+
+### Method Organization
+1. Constructor (`__init__`)
+2. Core methods
+3. Utility methods
+4. Serialization methods (`to_serializable`, `to_json_string`)
+
+## DATA HANDLING PATTERNS
+
+### Pandas Series Usage
+- Heavy use of pandas Series for time-series data
+- Consistent indexing with plan's `cal_year`
+- Use `pd.Series` for single values that need time series expansion
+
+### JSON Serialization
+```python
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (pd.Series, pd.DataFrame)):
+            return obj.to_dict()
+        return json.JSONEncoder.default(self, obj)
+```
+
+### Dictionary Operations
+- Frequent use of dictionary unpacking (`|=`)
+- Dictionary comprehensions for data transformation
+- Consistent key naming patterns
+
+## STREAMLIT UI PATTERNS
+
+### Session State Management
+```python
+# Initialize session state
+for key in ['plan', 'load_file']:
+    if key not in st.session_state.keys():
+        st.session_state[key] = None
+
+# Update session state
+st.session_state['plan_updated'] = True
+st.session_state['plan_saved'] = True
+```
+
+### Form Patterns
+```python
+@st.dialog('New Plan')
+def new_plan():
+    with st.form("new_plan"):
+        st.text_input("Plan Name", key='plan_name')
+        submit = st.form_submit_button(label="Create New Plan",
+                                      on_click=utils.ui_functions.set_new_plan)
+    if submit:
+        st.rerun()
+```
+
+### UI Organization
+- Use `st.container()` and `st.expander()` for organization
+- Consistent button styling with `use_container_width=True`
+- Strategic use of columns for layout
+
+## ERROR HANDLING & VALIDATION
+
+### Defensive Programming
+```python
+# Check for object existence
+if st.session_state['plan'] is not None:
+    # Perform operations
+
+# Type checking
+if isinstance(value, pd.Series):
+    # Handle series
+elif isinstance(value, dict):
+    # Handle dictionary
+```
+
+### Default Values
+- Provide sensible defaults for optional parameters
+- Use `attributes={}` for empty attribute dictionaries
+- Handle edge cases gracefully
+
+## FINANCIAL DOMAIN PATTERNS
+
+### Time Series Handling
+- All financial objects have `cal_year` attribute
+- Use `standardize_timeseries()` method for consistency
+- Handle inflation and growth rates as time series
+
+### Object Relationships
+- Complex object relationships with `paired_attr` dictionaries
+- Use `dependent_objs` flag for linked objects
+- Maintain object networks for calculations
+
+### Tax and Financial Calculations
+- Structured approach to tax calculations
+- Separate tax functions in dedicated modules
+- Use dictionaries for complex parameter sets
+
+## METHOD PATTERNS
+
+### Object Creation
+```python
+# Always use keyword arguments for clarity
+obj = SomeClass(person=person_id,
+                category=cat,
+                subcategory=subcat,
+                name=name,
+                cal_year=plan.cal_year,
+                value=value,
+                editable=True,
+                attributes={})
+```
+
+### Method Chaining
+```python
+# Frequent use of method chaining
+plan = obj.project(plan)
+plan = plan.balance_and_tax()
+```
+
+### Attribute Access
+```python
+# Use setattr/getattr for dynamic attribute handling
+setattr(obj, attr, value)
+getattr(obj, attr, default_value)
+```
+
+## DOCUMENTATION STYLE
+
+### Inline Comments
+- Strategic comments explaining complex logic
+- Avoid obvious comments
+- Focus on "why" not "what"
+
+### TODO Comments
+- Active use of TODO comments for future development
+- Keep track of planned features and improvements
+- Use consistent TODO format
+
+## PERFORMANCE CONSIDERATIONS
+
+### Data Structure Choices
+- Use pandas Series for time-series data
+- Efficient JSON serialization with custom encoders
+- Minimize object creation in loops
+
+### Memory Management
+- Use `copy.deepcopy()` when needed
+- Be mindful of large time series data
+- Clean up temporary objects
+
+## TESTING PATTERNS
+
+### Test File Structure
+- Use `test.py` for development testing
+- Create comprehensive test scenarios
+- Test object serialization/deserialization
+
+### Validation Testing
+- Test object relationships
+- Verify time series consistency
+- Check financial calculations
+
+## FUTURE DEVELOPMENT GUIDELINES
+
+### Adding New Features
+1. Follow existing patterns for similar functionality
+2. Maintain consistent naming conventions
+3. Update serialization methods if needed
+4. Add appropriate UI components
+5. Update documentation
+
+### Code Review Checklist
+- [ ] Follows naming conventions
+- [ ] Uses appropriate data structures
+- [ ] Handles edge cases
+- [ ] Includes necessary comments
+- [ ] Maintains object relationships
+- [ ] Updates serialization if needed
+
+## COMMON PITFALLS TO AVOID (COMPLETE REVISIONS TO THESE ISSUES COMING IN FUTURE RELEASES)
+
+1. **Inconsistent naming** - Always use snake_case
+2. **Missing type checking** - Validate data types before operations
+3. **Hard-coded values** - Use constants or configuration
+4. **Inconsistent time series** - Always standardize with plan.cal_year
+5. **Poor error handling** - Add defensive programming
+6. **Incomplete serialization** - Update all serialization methods
+
+## SUMMARY
+
+The Planaria codebase emphasizes:
+- **Clarity** through descriptive naming and consistent structure
+- **Maintainability** through modular organization and clear patterns
+- **Domain-specific organization** for financial planning concepts
+- **Robustness** through defensive programming and error handling
+- **Extensibility** through consistent object patterns and inheritance
+
+This style guide should be used by all developers (human and AI) working on the Planaria project to maintain consistency and quality. 

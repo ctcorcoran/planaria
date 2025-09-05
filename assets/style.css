@@ -1,0 +1,315 @@
+/* Global CSS Styles for Planaria Streamlit App */
+
+/* Force light mode and prevent color scheme changes */
+html, body {
+    color-scheme: light !important;
+}
+
+/* CSS Variables for Planaria Color System */
+:root {
+    --primary-earth-brown: #423721;
+    --secondary-eggshell-white: #ffffff;
+    --accent-orange-red: #d2694b;
+    --accent-yellow-gold: #d9a441;
+    --accent-green: #4f7c4a;
+    --accent-blue: #4a6b8a;
+    --shadow-color: rgba(66, 55, 33, 0.1);
+    --sidebar-width: 280px; /* Can be overridden by config */
+}
+
+/* Main content area styling - layout adjustments */
+.main .block-container {
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+/* Maximize page display space */
+[data-testid="stAppViewContainer"] {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Remove default Streamlit padding and expand main content area */
+[data-testid="stAppViewContainer"] .main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: calc(100vw - var(--sidebar-width)) !important; /* Full viewport width minus sidebar width */
+    max-width: none !important;
+}
+
+/* Additional main content area expansion */
+.main {
+    flex: 1 !important;
+    width: calc(100vw - var(--sidebar-width)) !important;
+    max-width: none !important;
+}
+
+/* Sidebar width and layout adjustments */
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div {
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+}
+
+/* Compact sidebar expanders - remove spacing and align to top */
+[data-testid="stSidebar"] .stExpander {
+    margin: 0 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+[data-testid="stSidebar"] .stExpander > div {
+    margin: 0 !important;
+}
+
+/* Remove default spacing between sidebar elements */
+[data-testid="stSidebar"] > div > div {
+    gap: 0 !important;
+    padding-top: 0.5rem !important;
+}
+
+/* Uniform button styling across entire app */
+.stButton > button {
+    border: 2px solid rgba(66, 55, 33, 0.8) !important;
+    font-size: 14px !important;
+    padding: 10px 16px !important;
+    margin: 4px 0 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 4px rgba(66, 55, 33, 0.2) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    background-color: rgba(66, 55, 33, 0.8) !important;
+    color: var(--secondary-eggshell-white) !important;
+}
+
+.stButton > button:hover {
+    background-color: var(--accent-orange-red) !important;
+    border-color: var(--accent-orange-red) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(66, 55, 33, 0.3) !important;
+}
+
+.stButton > button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 4px rgba(66, 55, 33, 0.2) !important;
+}
+
+.stButton > button:disabled {
+    background-color: #d1d5db !important;
+    border-color: #9ca3af !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Custom gradient header styling */
+h1 {
+    background: linear-gradient(135deg, var(--primary-earth-brown), var(--accent-orange-red)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
+
+/* Enhanced card styling */
+.stExpander {
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+/* Enhanced form focus states */
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus,
+.stSelectbox > div > div > select:focus {
+    box-shadow: 0 0 0 3px rgba(210, 105, 75, 0.1) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    [data-testid="stSidebar"],
+    [data-testid="stSidebar"] > div {
+        width: 200px !important;
+        min-width: 200px !important;
+    }
+    
+    .main .block-container {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    
+    h1 {
+        font-size: 2rem !important;
+    }
+} 
+
+/* ------------------------------- */
+/* Theme-style overrides via CSS   */
+/* Migrate invalid config.toml     */
+/* keys into CSS-based styling.    */
+/* ------------------------------- */
+
+/* Global fonts (override Streamlit theme font limitations) */
+html, body, [data-testid="stAppViewContainer"] {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    color: var(--primary-earth-brown) !important; /* textColor */
+    background-color: var(--secondary-eggshell-white) !important; /* backgroundColor */
+}
+
+/* Headings font family, sizes, weights */
+h1, h2, h3, h4, h5, h6 {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    color: var(--primary-earth-brown) !important;
+    font-weight: 700 !important;
+}
+h1 { font-size: 2.5rem !important; }
+h2 { font-size: 2.25rem !important; }
+h3 { font-size: 1.75rem !important; }
+h4 { font-size: 1.5rem !important; }
+h5 { font-size: 1.25rem !important; }
+h6 { font-size: 1rem !important; }
+
+/* Links */
+a, .stMarkdown a {
+    color: var(--accent-orange-red) !important; /* linkColor */
+    text-decoration: none !important; /* linkUnderline=false */
+}
+a:hover, .stMarkdown a:hover { text-decoration: underline !important; }
+
+/* Code blocks and inline code */
+pre, code, .stCode, .stMarkdown code {
+    background-color: #f3f4f6 !important; /* codeBackgroundColor */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+    font-size: 0.875rem !important; /* codeFontSize */
+}
+
+/* Secondary background (cards, expanders, containers) */
+.stExpander, .stTabs, .stTabs [data-baseweb], .stDataFrame, .stDataEditor {
+    background-color: #ffffff !important; /* secondaryBackgroundColor */
+    border-radius: 8px !important; /* baseRadius */
+}
+
+/* Inputs / widgets border and radius */
+input, select, textarea, .stTextInput > div > div > input, .stNumberInput > div > div > input,
+.stSelectbox > div > div > select, .stDateInput input, .stTimeInput input {
+    border: 1px solid #e5e7eb !important; /* borderColor */
+    border-radius: 8px !important; /* baseRadius */
+    background-color: #ffffff !important; /* secondaryBackgroundColor */
+}
+
+/* Dataframe/table header background and borders */
+.stDataFrame [role="table"], .stDataEditor [role="table"] {
+    border: 1px solid #e5e7eb !important; /* dataframeBorderColor */
+}
+.stDataFrame thead, .stDataEditor thead {
+    background-color: #f3f4f6 !important; /* dataframeHeaderBackgroundColor */
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"], [data-testid="stSidebar"] .css-1d391kg {
+    background-color: #f1f5f9 !important; /* sidebar backgroundColor */
+    color: var(--primary-earth-brown) !important; /* sidebar textColor */
+}
+[data-testid="stSidebar"] a { color: var(--accent-orange-red) !important; }
+[data-testid="stSidebar"] pre, [data-testid="stSidebar"] code { background-color: #f3f4f6 !important; }
+[data-testid="stSidebar"] input, [data-testid="stSidebar"] select, [data-testid="stSidebar"] textarea {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+}
+
+/* Buttons corner radius to match theme */
+.stButton > button { border-radius: 8px !important; }
+
+/* Update/Save buttons styling to match other buttons when toggled */
+.stButton > button[kind="primary"] {
+    background-color: rgba(66, 55, 33, 0.8) !important;
+    border-color: rgba(66, 55, 33, 0.8) !important;
+    color: var(--secondary-eggshell-white) !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background-color: var(--accent-orange-red) !important;
+    border-color: var(--accent-orange-red) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(66, 55, 33, 0.3) !important;
+}
+
+/* Compact Display Value dropdowns */
+.stSelectbox > div > div > select {
+    width: 200px !important;
+    max-width: 200px !important;
+}
+
+/* Move Streamlit header elements to bottom */
+/* Main header toolbar */
+[data-testid="stHeader"] {
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999 !important;
+    background: var(--secondary-eggshell-white) !important;
+    border-top: 1px solid #e5e7eb !important;
+    border-bottom: none !important;
+    box-shadow: 0 -2px 8px var(--shadow-color) !important;
+}
+
+/* Keep sidebar collapse button in default position */
+
+/* Adjust main content to account for bottom header */
+[data-testid="stAppViewContainer"] {
+    padding-bottom: 60px !important;
+}
+
+/* Ensure the moved header is visible at bottom */
+[data-testid="stHeader"] {
+    display: block !important;
+}
+
+/* Colorful divider styling */
+.planaria-divider {
+    height: 4px !important;
+    background: linear-gradient(90deg, 
+        var(--accent-orange-red) 0%, 
+        var(--accent-orange-red) 20%,
+        var(--accent-yellow-gold) 20%, 
+        var(--accent-yellow-gold) 40%,
+        var(--accent-green) 40%, 
+        var(--accent-green) 60%,
+        var(--accent-blue) 60%, 
+        var(--accent-blue) 80%,
+        var(--primary-earth-brown) 80%, 
+        var(--primary-earth-brown) 100%
+    ) !important;
+    border: none !important;
+    margin: 1rem 0 2rem 0 !important;
+    border-radius: 2px !important;
+    box-shadow: 0 1px 3px var(--shadow-color) !important;
+}
+
+/* Alternative divider using st.markdown */
+.planaria-colorful-divider {
+    height: 4px !important;
+    background: linear-gradient(90deg, 
+        #d2694b 0%, 
+        #d2694b 20%,
+        #d9a441 20%, 
+        #d9a441 40%,
+        #4f7c4a 40%, 
+        #4f7c4a 60%,
+        #4a6b8a 60%, 
+        #4a6b8a 80%,
+        #423721 80%, 
+        #423721 100%
+    ) !important;
+    border: none !important;
+    margin: 1rem 0 2rem 0 !important;
+    border-radius: 2px !important;
+    box-shadow: 0 1px 3px rgba(66, 55, 33, 0.1) !important;
+}

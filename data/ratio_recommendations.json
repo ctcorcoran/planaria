@@ -1,0 +1,16 @@
+{
+"liquidity_ratio":{"name":"Liquidity Ratio","ymin":6,"ymax":6,"n":6,"marker":"triangle-up"},
+"after_tax_savings_ratio":{"name":"After Tax Savings Ratio","ymin":0.1,"ymax":0.1,"n":6,"marker":"triangle-up"},
+"total_savings_ratio":{"name":"Total Savings Ratio","ymin":0.2,"ymax":0.2,"n":6,"marker":"triangle-up"},
+"current_ratio":{"name":"Current Ratio","ymin":1,"ymax":1,"n":6,"marker":"triangle-up"},
+"debt_to_asset_ratio":{"name":"Debt to Asset Ratio","ymin":0.5,"ymax":0.5,"n":6,"marker":"triangle-down"},
+"debt_to_income_ratio":{"name":"Debt to Income Ratio","ymin":0.35,"ymax":0.35,"n":6,"marker":"triangle-down"},
+"non_mortgage_debt_service_ratio":{"name":"Non-Mortgage Debt Ratio","ymin":0.15,"ymax":0.15,"n":6,"marker":"triangle-down"},
+"household_debt_service_ratio":{"name":"Household Debt Service Ratio","ymin":0.25,"ymax":0.25,"n":6,"marker":"triangle-down"},
+"liquid_savings_to_net_worth_ratio":{"name":"Liquid Savings to Net Worth Ratio","ymin":0.15,"ymax":0.15,"n":6,"marker":"triangle-up"},
+"invested_assets_to_net_worth_ratio":{"name":"Invested Assets to Net Worth Ratio","ymin":0.5,"ymax":0.5,"n":6,"marker":"triangle-up"},
+"solvency_ratio":{"name":"Solvency Ratio","ymin":0.2,"ymax":0.9,"n":6,"marker":"triangle-up"},
+"basic_housing_ratio":{"name":"Basic Housing Ratio","ymin":0.33,"ymax":0.33,"n":6,"marker":"triangle-up"},
+"investment_assets_to_gross_pay_ratio":{"name":"Investment Assets to Gross Pay Ratio","ymin":1.5,"ymax":20,"n":6,"marker":"triangle-up"}
+}
+
