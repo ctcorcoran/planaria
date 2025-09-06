@@ -450,7 +450,7 @@ class Plan:
         
         # Don't include future events, or ignored categories
         if include_events == False:
-            objs = [obj for obj in getattr(self,obj_type) if obj.category not in cats_to_ignore and obj.id not in [x[2] for x in self.events]]
+            objs = [obj for obj in getattr(self,obj_type) if obj.category not in cats_to_ignore and not obj.future_event]
         else:
             objs = [obj for obj in getattr(self,obj_type) if obj.category not in cats_to_ignore]
             

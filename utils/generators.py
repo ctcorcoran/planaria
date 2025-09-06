@@ -42,6 +42,9 @@ def buy_asset_with_liability(plan,person,start_year,tax_keyword_dict,value,asset
                                                 False,
                                                 True,
                                                 {'start_year':start_year})
+    # Mark as future event object if created for future purchase
+    if start_year > plan.start_year:
+        asset_obj.future_event = True
     
     # Determine if a liability needs to be created or not
     if down_payment_sources == None:
@@ -87,6 +90,9 @@ def buy_asset_with_liability(plan,person,start_year,tax_keyword_dict,value,asset
                                                   existing,
                                                   True,
                                                   liab_dict['attributes']|{'start_year':start_year})
+        # Mark as future event object if created for future purchase
+        if start_year > plan.start_year:
+            liab_obj.future_event = True
         
         # Make value - asset_value pair for equity calculations  
         liab_obj.dependent_objs = True
@@ -176,6 +182,9 @@ def buy_home(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sour
                                 False,
                                 True,
                                 {'infl_rate':plan.infl_rate,})
+    # Mark as future event object if created for future purchase
+    if start_year > plan.start_year:
+        insurance.future_event = True
     
     insurance.paired_attr['time'] |= {asset_id:[['start_year','start_year',0],['end_year','end_year',0]]}
     plan.pairs['time'].append([asset_id,insurance.id])
@@ -235,6 +244,9 @@ def buy_car(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sourc
                                 False,
                                 True,
                                 {'infl_rate':plan.infl_rate})
+    # Mark as future event object if created for future purchase
+    if start_year > plan.start_year:
+        insurance.future_event = True
     insurance.paired_attr['time'] |= {asset_id:[['start_year','start_year',0],['end_year','end_year',0]]}
     plan.pairs['time'].append([asset_id,insurance.id])
     plan.expenses.append(insurance)
@@ -305,6 +317,8 @@ def create_child_expenses(plan,child_name,input_df):
                         'child_components': {child.id: pd.Series(vals_dict[cat][0:age_start], index=child.age.index[child.age.isin(range(0, age_start))])}
                     }
                 ).standardize_timeseries(plan.cal_year)
+                # Mark as future event object (child expenses are always future events)
+                childcare.future_event = True
                 plan.expenses.append(childcare)
                 plan = childcare.project(plan)
             else:
@@ -334,6 +348,8 @@ def create_child_expenses(plan,child_name,input_df):
                     'child_components': {child.id: pd.Series(vals_dict[cat][age_start:18], index=child.age.index[child.age.isin(range(age_start, 18))])}
                 }
             ).standardize_timeseries(plan.cal_year)
+            # Mark as future event object (child expenses are always future events)
+            exp.future_event = True
             plan.expenses.append(exp)
             plan = exp.project(plan)
         else:

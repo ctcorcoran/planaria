@@ -299,7 +299,7 @@ def generate_asset(asset_id,session_state):
         paired_liab = False
     
     # Determine if a future addition, will set expander label, etc... 
-    if asset_id in [x[2] for x in st.session_state['plan'].events]:
+    if obj.future_event:
         existing = False
         expander_label = f"({obj.start_year}) {BUTTON_BUY_HOME if obj.subcategory=='Real Estate' else (BUTTON_BUY_CAR if obj.subcategory=='Automobile' else BUTTON_ADD_ASSET)} Buy {obj.name}"
     else:
@@ -521,7 +521,7 @@ def update_asset(id_list,attr,session_state):
     asset_obj = st.session_state['plan'].get_object_from_id(asset_id)
   
     # Determine if a future addition
-    if asset_id in [x[1] for x in st.session_state['plan'].events]:
+    if asset_obj.future_event:
         existing = False
     else:
         existing = True  

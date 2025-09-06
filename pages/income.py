@@ -360,11 +360,8 @@ with col1:
     
     # Remove the standalone Add Pension button - pension controls are now entirely within each income widget
 
-    # Get all future event object IDs (including descendants)
-    future_event_ids = utils.utilities.get_future_event_object_ids(st.session_state['plan'])
-    
     for cat in ['Earned']:
-        temp_obj_list = [obj for obj in st.session_state['plan'].income if obj.category == cat and obj.id not in future_event_ids]
+        temp_obj_list = [obj for obj in st.session_state['plan'].income if obj.category == cat and not obj.future_event]
         if len(temp_obj_list) > 0:
             st.subheader(cat)
             for obj in sorted(temp_obj_list,key = lambda x: x.value[x.start_year], reverse=True):    
@@ -376,7 +373,7 @@ with col1:
          
        
 with col2:
-    st.write('Gross Income (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].income if obj.id not in future_event_ids]))
+    st.write('Gross Income (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].income if not obj.future_event]))
     st.plotly_chart(st.session_state['plan'].pie_chart('income',st.session_state['plan'].start_year,'pie'))
 
 # Display Value toggle at bottom

@@ -356,12 +356,9 @@ with col1:
                   on_click=add_car,
                   args=[st.session_state])
         
-    # Get all future event object IDs (including descendants)
-    future_event_ids = utils.utilities.get_future_event_object_ids(st.session_state['plan'])
-    
     # Loop over each subcategory
     for subcat in ['Retirement','Savings','Bonds','Automobile','Real Estate']:
-        temp_obj_list = [obj for obj in st.session_state['plan'].assets if obj.subcategory == subcat and not getattr(obj, 'ui_hidden', False) and obj.id not in future_event_ids]
+        temp_obj_list = [obj for obj in st.session_state['plan'].assets if obj.subcategory == subcat and not getattr(obj, 'ui_hidden', False) and not obj.future_event]
         if len(temp_obj_list) > 0:
             st.subheader(subcat)
             for asset in sorted(temp_obj_list,key = lambda x: x.value[x.start_year], reverse=True):
@@ -372,7 +369,7 @@ with col1:
                     asset_obj = generate_static_asset(asset.id)
          
 with col2:
-    st.write('Total Assets (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].assets if obj.id not in future_event_ids]))
+    st.write('Total Assets (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].assets if not obj.future_event]))
     st.plotly_chart(st.session_state['plan'].pie_chart('assets',st.session_state['plan'].start_year,'pie'))
 
     #

@@ -47,6 +47,9 @@ class FinObj:
         self.name = name
         self.editable = editable
         
+        # Track if this object was created by a future event
+        self.future_event = False
+        
         # Set Time
         self.cal_year = cal_year
 
@@ -532,6 +535,10 @@ class AssetObj(FinObj):
             exp_obj.paired_attr['series'] |= {self.id:[['value','value',props]]}
             exp_obj.paired_attr['time'] |= {self.id:[['start_year','start_year',0],['end_year','end_year',0]]}
 
+        # Mark as future event object if the parent asset is a future event
+        if self.future_event:
+            exp_obj.future_event = True
+
         self.dependent_objs = True
         plan.expenses.append(exp_obj)
         #plan = exp_obj.project(plan)
@@ -795,6 +802,10 @@ class LiabObj(FinObj):
         exp_obj = ExpenseObj(self.person,'Necessary',subcat,self.name,'',self.cal_year,self.total_payment_annual,
                              True,False,{'start_year':self.start_year,'end_year':self.end_year})
         
+        # Mark as future event object if the parent liability is a future event
+        if self.future_event:
+            exp_obj.future_event = True
+        
         # Occassionally useful for tax purposes
         exp_obj.interest_payment = self.interest_payment_annual
         
@@ -812,6 +823,9 @@ class LiabObj(FinObj):
         if sum(self.extra_payment) > 0:
             extra_exp_obj = ExpenseObj(self.person,'Discretionary',self.category,self.name+' (Extra Payment)','',self.cal_year,self.extra_payment_annual,
                              True,False,{'start_year':self.start_year,'end_year':self.end_year})
+            # Mark as future event object if the parent liability is a future event
+            if self.future_event:
+                extra_exp_obj.future_event = True
             extra_exp_obj.paired_attr['series'] |= {self.id:[['extra_payment_annual','value',1.0]]}
             extra_exp_obj.paired_attr['time'] |= {self.id:[['start_year','start_year',0],['end_year','end_year',0]]}                 
             #

@@ -335,15 +335,10 @@ def get_future_event_object_ids(plan):
     """Get all object IDs related to future events (including descendants)."""
     future_event_ids = set()
     
-    # Get all direct future event object IDs
-    for event in plan.events:
-        if len(event) >= 3:  # Ensure event has object ID
-            event_obj_id = event[2]
-            future_event_ids.add(event_obj_id)
-            
-            # Get all descendants of this future event object
-            descendants = get_all_descendants(plan, event_obj_id)
-            for network in ['series', 'time', 'share']:
-                future_event_ids.update(descendants[network])
+    # Get all objects marked as future events
+    for obj_list in [plan.assets, plan.expenses, plan.liabilities, plan.income]:
+        for obj in obj_list:
+            if obj.future_event:
+                future_event_ids.add(obj.id)
     
     return future_event_ids

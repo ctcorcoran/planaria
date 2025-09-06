@@ -235,12 +235,9 @@ with col1:
     
     # Loop over each category 
 
-    # Get all future event object IDs (including descendants)
-    future_event_ids = utils.utilities.get_future_event_object_ids(st.session_state['plan'])
-    
     for cat in ['Necessary','Discretionary','Savings']:
         # Get objects that have a nonzero value for the plan start year
-        temp_obj_list = [obj for obj in st.session_state['plan'].expenses if obj.category == cat and obj.value[st.session_state['plan'].start_year]>0 and obj.id not in future_event_ids]
+        temp_obj_list = [obj for obj in st.session_state['plan'].expenses if obj.category == cat and obj.value[st.session_state['plan'].start_year]>0 and not obj.future_event]
         if len(temp_obj_list) > 0:
             st.subheader(cat)
             # Sort by value in the plan start year
@@ -253,7 +250,7 @@ with col1:
                         obj = generate_static_expense(obj.id,disp_div)    
          
 with col2:
-    st.write('Total Expenses (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].expenses if obj.id not in future_event_ids]))
+    st.write('Total Expenses (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].expenses if not obj.future_event]))
     st.plotly_chart(st.session_state['plan'].pie_chart('expenses',st.session_state['plan'].start_year,'sunburst',cats_to_ignore=['Tax']))
 
 # Display Value toggle at bottom
