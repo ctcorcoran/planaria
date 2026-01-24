@@ -1,6 +1,8 @@
 ### STREAMLIT OBJECT GENERATORS
 import streamlit as st
 import toml
+import os
+import re
 
 import objs.plan
 import utils.ui_functions
@@ -116,9 +118,27 @@ def save_plan():
     """Save the current plan to a JSON file."""
     if st.session_state['plan_updated'] == False:
         update_plan()
-    with open('saved_plans/'+st.session_state['plan'].name+'.json', 'w') as out:
-        out.write(st.session_state['plan'].to_json_string())    
-    st.session_state['plan_saved'] = True
+    raw_name = st.session_state['plan'].name
+    safe_name = re.sub(r'[\\/:*?"<>|]', '_', str(raw_name).strip())
+    safe_name = re.sub(r'\s+', ' ', safe_name).strip()
+    if safe_name == '':
+        st.error("Save failed: plan name is empty or invalid.")
+        return
+    plan_name = safe_name
+    target_path = f"saved_plans/{plan_name}.json"
+    temp_path = f"{target_path}.tmp"
+    try:
+        payload = st.session_state['plan'].to_json_string()
+        if payload is None or payload.strip() == '':
+            raise ValueError("Plan serialization produced empty JSON.")
+        with open(temp_path, 'w') as out:
+            out.write(payload)
+        os.replace(temp_path, target_path)
+        st.session_state['plan_saved'] = True
+    except Exception as exc:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        st.error(f"Save failed: {exc}")
 
 def update_plan():
     """

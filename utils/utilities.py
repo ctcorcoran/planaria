@@ -68,6 +68,19 @@ def json_to_plan(json_string):
         load_plan = json.loads(json_string)
     elif isinstance(json_string,dict):
         load_plan = json_string
+    else:
+        raise ValueError("Plan JSON must be a string or dict.")
+
+    if not isinstance(load_plan, dict) or len(load_plan) == 0:
+        raise ValueError("Plan JSON is empty or invalid.")
+
+    # Basic validation for required fields
+    required_keys = ['name','start_year','n_years','infl_rate','col_rate','cal_year',
+                     'people','income','expenses','assets','liabilities','events','pairs','drawdown_order']
+    missing_keys = [key for key in required_keys if key not in load_plan]
+    if len(missing_keys) > 0:
+        raise ValueError(f"Plan JSON missing keys: {', '.join(missing_keys)}")
+
     temp_plan = objs.plan.Plan("",0,0,0,0)
     for key, value in load_plan.items():
         if key in ['people','income','expenses','assets','liabilities']:

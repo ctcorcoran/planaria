@@ -623,16 +623,28 @@ def update_asset(id_list,attr,session_state):
             new_down_payment_sources = liab_obj.down_payment_sources
             year = liab_obj.start_year
         else:
-            old_down_payment_sources = liab_obj.down_payment_sources
+            old_down_payment_sources = asset_obj.down_payment_sources
             new_down_payment_sources = asset_obj.down_payment_sources
             year = asset_obj.start_year
             
         # First, copy the old down_payment_sources, and update with data_editor 
-        for i in st.session_state['down_payment_sources_new']['edited_rows'].keys():
-            if st.session_state['down_payment_sources_new']['edited_rows'][i]['Value/Proportion'] == None:
-                new_down_payment_sources = [x for x in new_down_payment_sources if x[0] != st.session_state['down_payment_sources_new']['edited_rows'][i]['id']]
-            else:
-                new_down_payment_sources = [(x[0],x[1]) if x[0] != st.session_state['down_payment_sources_new']['edited_rows'][i]['id'] else (x[0],st.session_state['down_payment_sources_new']['edited_rows'][i]['Value/Proportion']) for x in new_down_payment_sources]
+        editor_state = st.session_state.get(f'{asset_id}_down_payment_sources')
+        if isinstance(editor_state, pd.DataFrame):
+            new_down_payment_sources = [
+                (row['id'], row['Value/Proportion'])
+                for _, row in editor_state.iterrows()
+                if row['Value/Proportion'] is not None
+            ]
+        elif isinstance(editor_state, dict) and 'edited_rows' in editor_state:
+            for _, row_data in editor_state['edited_rows'].items():
+                source_id = row_data.get('id')
+                value = row_data.get('Value/Proportion')
+                if source_id is None:
+                    continue
+                if value is None:
+                    new_down_payment_sources = [x for x in new_down_payment_sources if x[0] != source_id]
+                else:
+                    new_down_payment_sources = [(x[0],x[1]) if x[0] != source_id else (x[0],value) for x in new_down_payment_sources]
 
         # Then, calculate the the down_payment
         if paired_liab == True:

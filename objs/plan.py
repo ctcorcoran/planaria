@@ -134,7 +134,16 @@ class Plan:
         """Reorder object IDs for consistency and serialization."""
         replace_dict = {}
         for lst in ['income','expenses','assets','liabilities']:
-            setattr(self,lst,sorted(getattr(self,lst),key = lambda x: x.value[x.start_year], reverse=True))
+            def sort_key(obj):
+                value = obj.value
+                if isinstance(value, pd.Series):
+                    if obj.start_year in value.index:
+                        return value[obj.start_year]
+                    if len(value) > 0:
+                        return value.iloc[0]
+                    return 0
+                return value
+            setattr(self,lst,sorted(getattr(self,lst),key=sort_key, reverse=True))
             replace_dict |= {obj.id:(obj.id.split('_')[0]+'_'+str(getattr(self,lst).index(obj)+1)) for obj in getattr(self,lst)}
         for obj in self.income+self.expenses+self.assets+self.liabilities:
             # Update ID, paired attributes, and downpayment (if relevant)

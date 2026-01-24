@@ -66,7 +66,16 @@ st.button('Load Plan',on_click=load_plan,use_container_width=True)
 # PERMANENT 
 
 if st.session_state['load_file'] is not None:
-    st.session_state['plan'] = copy.deepcopy(utils.utilities.json_to_plan(json.load(st.session_state['load_file'])))
-    st.session_state['plan_updated'] = True
-    st.session_state['plan_saved'] = True
-    utils.ui_functions.make_sidebar()
+    try:
+        raw_bytes = st.session_state['load_file'].getvalue()
+        raw_text = raw_bytes.decode('utf-8').strip()
+        if raw_text == '':
+            raise json.JSONDecodeError("Empty file", raw_text, 0)
+        payload = json.loads(raw_text)
+        st.session_state['plan'] = copy.deepcopy(utils.utilities.json_to_plan(payload))
+        st.session_state['plan_updated'] = True
+        st.session_state['plan_saved'] = True
+        utils.ui_functions.make_sidebar()
+    except json.JSONDecodeError as exc:
+        st.error(f"Could not load plan: invalid JSON ({exc.msg}).")
+        st.session_state['load_file'] = None
