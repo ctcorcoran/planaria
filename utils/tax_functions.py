@@ -410,9 +410,11 @@ def balance_and_tax(plan):
 
     for filer in plan.tax_df.filer.unique():
         for col, name in {'state_income_tax':['Income','State'],'fed_income_tax':['Income','Federal'],'payroll_tax':['Payroll','Payroll']}.items():
+            tax_series = plan.tax_df.loc[plan.tax_df['filer']==filer, col]
+            tax_series = tax_series.replace([np.inf, -np.inf], np.nan).fillna(0).astype(int)
             exp = objs.financial_objects.ExpenseObj(filer,'Tax',name[0],name[1],'',
                               plan.cal_year,
-                              plan.tax_df.loc[plan.tax_df['filer']==filer,col].astype(int),
+                              tax_series,
                               True,False)
             plan.expenses.append(exp)
             plan = exp.project(plan)

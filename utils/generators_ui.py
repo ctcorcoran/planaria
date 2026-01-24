@@ -298,21 +298,33 @@ def generate_asset(asset_id,session_state):
     else:
         paired_liab = False
     
-    # Determine if a future addition, will set expander label, etc... 
-    if obj.future_event:
-        existing = False
-        expander_label = f"({obj.start_year}) {BUTTON_BUY_HOME if obj.subcategory=='Real Estate' else (BUTTON_BUY_CAR if obj.subcategory=='Automobile' else BUTTON_ADD_ASSET)} Buy {obj.name}"
-    else:
-        existing = True
-        expander_label = f"{BUTTON_ADD_ASSET} {obj.name} (and Expenses)"
-        
-    # Choose emoji based on asset subcategory
-    if obj.subcategory == 'Real Estate':
+    # Determine if this asset is a future event (events list is source of truth)
+    asset_event = next((ev for ev in st.session_state['plan'].events
+                        if ev[2] == asset_id and ev[1] in ['Buy Home','Buy Car']), None)
+    is_future_event = (asset_event is not None) or obj.future_event
+    event_year = int(asset_event[0]) if asset_event is not None else obj.start_year
+    event_type = asset_event[1] if asset_event is not None else None
+
+    # Determine label and emoji based on event type or subcategory (legacy-safe)
+    if event_type == 'Buy Home':
         prefix = BUTTON_BUY_HOME
-    elif obj.subcategory == 'Automobile':
+    elif event_type == 'Buy Car':
+        prefix = BUTTON_BUY_CAR
+    elif obj.subcategory in ['Real Estate','Home']:
+        prefix = BUTTON_BUY_HOME
+    elif obj.subcategory in ['Automobile','Car','Auto']:
         prefix = BUTTON_BUY_CAR
     else:
         prefix = BUTTON_ADD_ASSET
+
+    if is_future_event:
+        existing = False
+        action_label = event_type if event_type is not None else f"Buy {obj.name}"
+        expander_label = f"({event_year}) {prefix} {action_label}"
+    else:
+        existing = True
+        expander_label = f"{BUTTON_ADD_ASSET} {obj.name} (and Expenses)"
+
     with st.expander(label=expander_label):
         st.write("Person",person_name)
         
@@ -321,7 +333,7 @@ def generate_asset(asset_id,session_state):
             st.number_input("Purchase Year",
                             min_value=st.session_state['plan'].start_year,
                             max_value=st.session_state['plan'].start_year+st.session_state['plan'].n_years,
-                            value=obj.start_year,
+                            value=event_year,
                             step=1,
                             on_change=update_asset,
                             args=[[asset_id]+paired_ids,'start_year',session_state],
@@ -334,18 +346,18 @@ def generate_asset(asset_id,session_state):
             val_label = "Present Value"
             
         st.number_input(val_label,
-                        min_value=0,
-                        value=obj.value[obj.start_year],
-                        step=100,
+                        min_value=0.0,
+                        value=float(obj.value[obj.start_year]),
+                        step=100.0,
                         on_change=update_asset,
                         args=[[asset_id]+paired_ids,'value',session_state],
                         key=f"{asset_id}_value")
         
         if paired_liab == True and existing == True:
             st.number_input("Loan Balance Remaining",
-                            min_value=0,
-                            value=liab_obj.value[liab_obj.start_year],
-                            step=100,
+                            min_value=0.0,
+                            value=float(liab_obj.value[liab_obj.start_year]),
+                            step=100.0,
                             on_change=update_asset,
                             args=[[asset_id]+paired_ids,'present_value',session_state],
                             key=f"{asset_id}_present_value")
@@ -448,9 +460,9 @@ def generate_asset(asset_id,session_state):
         else:
             if paired_liab == True:
                 st.number_input('Monthly Payment',
-                                min_value=0,
-                                value = liab_obj.payment,
-                                step = 1,
+                                min_value=0.0,
+                                value=float(liab_obj.payment),
+                                step=1.0,
                                 on_change=update_asset,
                                 args=[[asset_id]+paired_ids,'payment',session_state],
                                 key=f'{asset_id}_payment')
@@ -495,9 +507,9 @@ def generate_asset(asset_id,session_state):
         ins_obj = [obj_ for obj_ in st.session_state['plan'].expenses if (obj.id in [key for inner_dict in obj_.paired_attr.values() for key in inner_dict.keys()] and 'Insurance' in obj_.name)][0]
         
         st.number_input("Insurance",
-                        min_value=0,
-                        value=ins_obj.value_input[ins_obj.start_year],
-                        step=10,
+                        min_value=0.0,
+                        value=float(ins_obj.value_input[ins_obj.start_year]),
+                        step=10.0,
                         on_change=update_asset,
                         args=[[asset_id]+paired_ids,'insurance',session_state],
                         key=f"{asset_id}_insurance")
