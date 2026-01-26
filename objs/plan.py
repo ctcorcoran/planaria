@@ -452,16 +452,21 @@ class Plan:
     
     # Some are fully described methods for simple plots such as pie charts
     # Others are wrappers for more complex plotting functions stored elsewhere
-    def pie_chart(self,obj_type,year,plot_type='pie',include_events=False,cats_to_ignore=[]):
-        color_dict = {'Income':'cornflowerblue','Necessary':'gold','Discretionary':'darkorange','Savings':'limegreen',
-                      'Retirement':'cornflowerblue','Bonds':'cornflowerblue','Real Estate':'gold','Automobile':'gold',
-                      'Revolving':'darkorange','Installment':'gold'}
+    def pie_chart(self,obj_type,year,plot_type='pie',include_events=False,cats_to_ignore=[],person=None):
+        color_dict = (utils.plotting.CASHFLOW_COLORS | {
+            'Retirement':'cornflowerblue','Bonds':'cornflowerblue','Real Estate':'gold','Automobile':'gold',
+            'Revolving':'darkorange','Installment':'gold'
+        })
         
         # Don't include future events, or ignored categories
         if include_events == False:
             objs = [obj for obj in getattr(self,obj_type) if obj.category not in cats_to_ignore and not obj.future_event]
         else:
             objs = [obj for obj in getattr(self,obj_type) if obj.category not in cats_to_ignore]
+
+        if person is not None:
+            people = utils.plotting.make_people_list(self, person) + ['Joint']
+            objs = [obj for obj in objs if obj.person in people]
             
         plot_df = pd.DataFrame({'name':[obj.name for obj in objs],
                                 'person':['Joint' if obj.person == 'Joint' else self.get_object_from_id(obj.person).name for obj in objs],

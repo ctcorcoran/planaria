@@ -80,7 +80,10 @@ with budget_tab:
                                                    statement_type='cashflow')
         st.dataframe(budget,hide_index=True,use_container_width=True)
     with col2:
-        st.plotly_chart(st.session_state['plan'].pie_chart('expenses',st.session_state['budget_display_year'],'sunburst'))
+        st.plotly_chart(st.session_state['plan'].pie_chart('expenses',
+                                                          st.session_state['budget_display_year'],
+                                                          'sunburst',
+                                                          person=st.session_state['budget_display_person']))
 
 with sankey_tab:
     st.subheader('Cash Flow Sankey Diagram')

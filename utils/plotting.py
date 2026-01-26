@@ -21,6 +21,15 @@ with open(ratio_rec_file_path, 'r') as j:
     except json.decoder.JSONDecodeError as e:
         print(f"Invalid JSON string: {e}")
 
+# Shared palette for cash flow-related visuals
+CASHFLOW_COLORS = {
+    'Income':'#9467bd',
+    'Necessary':'#0077cc',
+    'Discretionary':'#f4b000',
+    'Savings':'#2ca02c',
+    'Tax':'#d62728'
+}
+
 def make_people_list(plan,people):
     if people == 'Joint':
         people = [person.id for person in plan.people if person.dependent == False]
@@ -144,13 +153,7 @@ def expense_plots(plan,people,level,after_tax=False):
     exp_grouped = df.loc[df['person_split'].isin(people),level_list+['cal_year','value']].groupby(level_list+['cal_year'],as_index=False).sum(numeric_only=None)
     after_tax_exp_grouped = exp_grouped.loc[exp_grouped['category']!='Tax',:] #.groupby(['category','subcategory','owner','cal_year'],as_index=False).sum(numeric_only=None)
     
-    nec_color = '#1f77b4'#,  // muted blue
-    disc_color ='#ff7f0e'#,  // safety orange
-    sav_color = '#2ca02c'#,  // cooked asparagus green
-    tax_color = '#d62728'#,  // brick red
-    
-    col_dict = {'Discretionary':disc_color,'Necessary':nec_color,
-                'Savings':sav_color,'Tax':tax_color}
+    col_dict = CASHFLOW_COLORS
     
     if after_tax == False:
         fig = px.area(exp_grouped, 
@@ -385,13 +388,7 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     links = links.replace({'source':subcat_conversion,'target':name_conversion}).infer_objects(copy=False)
     
     # Colors
-    nec_color = '#1f77b4'#,  // muted blue
-    disc_color ='#ff7f0e'#,  // safety orange
-    sav_color = '#2ca02c'#,  // cooked asparagus green
-    tax_color = '#d62728'#,  // brick red
-    inc_color = '#9467bd'#,  // muted purple
-    col_dict = {'Necessary':nec_color,'Discretionary':disc_color,'Savings':sav_color,'Tax':tax_color,'Income':inc_color}
-    node_color = [col_dict[cat] for cat in node_color]
+    node_color = [CASHFLOW_COLORS[cat] for cat in node_color]
 
     if normalize == True:
         links['value'] = (100*links['value']/tot)
