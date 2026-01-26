@@ -33,8 +33,8 @@ max_vesting_years = 20
 
 [ui_defaults]
 # Display settings
-default_display_value = "Annual"
-expense_display_default = "Annual"
+default_display_value = "Monthly"
+expense_display_default = "Monthly"
 income_display_default = "Annual"
 
 # Column layouts

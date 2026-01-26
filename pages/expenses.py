@@ -177,7 +177,7 @@ def generate_expense(expense_id,disp_div):
         with col2:
             st.radio(label='AnnMonth',
                      options=['Annual','Monthly'],
-                     index=1,
+                     index=['Annual','Monthly'].index(st.session_state['expense_display']),
                      key=f'{expense_id}_ann_month',
                      label_visibility='hidden')
             if st.session_state[f'{expense_id}_ann_month'] == 'Annual':
