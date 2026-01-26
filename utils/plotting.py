@@ -112,11 +112,16 @@ def generate_statement(plan,people,year,statement_type='cashflow'):
     for obj_type in obj_type_list:
         out_df = pd.concat([out_df,pd.DataFrame({'obj_type':[obj_type]})])
         for cat in df_cat.loc[df_cat['obj_type']==obj_type,'category']:
-            out_df = pd.concat([out_df,pd.DataFrame({'category':[cat],'value':df_cat.loc[df_cat['category']==cat,'value'].astype(str)})])
+            cat_value = df_cat.loc[(df_cat['obj_type']==obj_type) & (df_cat['category']==cat),'value'].sum()
+            out_df = pd.concat([out_df,pd.DataFrame({'category':[cat],'value':[str(cat_value)]})])
             for subcat in df_subcat.loc[(df_subcat['obj_type']==obj_type)&(df_subcat['category']==cat),'subcategory']:
                 out_df = pd.concat([out_df,pd.DataFrame({'subcategory':[subcat],'value':['']})]) #df_subcat.loc[df_subcat['subcategory']==subcat,'value']})])
                 for name in df_name.loc[(df_name['obj_type']==obj_type)&(df_name['category']==cat)&(df_name['subcategory']==subcat),'name']:
-                    out_df = pd.concat([out_df,pd.DataFrame({'name':[name],'value':df_name.loc[df_name['name']==name,'value'].astype(str)})])
+                    name_value = df_name.loc[(df_name['obj_type']==obj_type) &
+                                             (df_name['category']==cat) &
+                                             (df_name['subcategory']==subcat) &
+                                             (df_name['name']==name),'value'].sum()
+                    out_df = pd.concat([out_df,pd.DataFrame({'name':[name],'value':[str(name_value)]})])
     if statement_type == 'balance_sheet':
         out_df = pd.concat([out_df,pd.DataFrame({'obj_type':['Net Worth'],'value':[str(A_df['value'].sum()-B_df['value'].sum())]})])
     
