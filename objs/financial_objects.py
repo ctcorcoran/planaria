@@ -258,6 +258,10 @@ class IncomeObj(IncExpObj):
         
         # Only income-specific attribute is taxable
         self.taxable = taxable
+
+        # Optional payroll tax add-ons (list of dicts: {'name': str, 'rate': float})
+        if not hasattr(self, 'payroll_taxes') or self.payroll_taxes is None:
+            self.payroll_taxes = []
         
         # If joint income is added in the future, components will be added here too
     
@@ -411,6 +415,21 @@ class IncomeObj(IncExpObj):
                                 if attr_pair[0] == 'value' and attr_pair[1] == 'value':
                                     return attr_pair[2]
         return None
+
+    def add_payroll_tax(self, tax_name, tax_rate):
+        """Add a payroll tax add-on for this income."""
+        if not hasattr(self, 'payroll_taxes') or self.payroll_taxes is None:
+            self.payroll_taxes = []
+        self.payroll_taxes.append({'name': tax_name, 'rate': float(tax_rate)})
+        return self
+
+    def remove_payroll_tax(self, tax_index):
+        """Remove a payroll tax add-on by list index."""
+        if not hasattr(self, 'payroll_taxes') or self.payroll_taxes is None:
+            self.payroll_taxes = []
+        if 0 <= tax_index < len(self.payroll_taxes):
+            self.payroll_taxes.pop(tax_index)
+        return self
         
 ###############################################################################        
 

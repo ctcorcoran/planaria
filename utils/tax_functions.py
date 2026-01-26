@@ -91,6 +91,16 @@ def calculate_income_and_payroll_tax(plan):
     filing_status_list = ['single','joint','separate']  
   
   tax_df_dict = {status:{} for status in filing_status_list} 
+
+  # Collect all custom payroll tax names across incomes
+  all_payroll_tax_names = []
+  for obj in plan.income:
+    if hasattr(obj, 'payroll_taxes') and obj.payroll_taxes:
+      for payroll_tax in obj.payroll_taxes:
+        tax_name = payroll_tax.get('name', '').strip()
+        if tax_name != '':
+          all_payroll_tax_names.append(tax_name)
+  all_payroll_tax_names = sorted(list(set(all_payroll_tax_names)))
   
   # For ease of navigating the dict, we will recalculate from in the input year for each
   # Year in the projection. There is probably a faster way to do this by not looping over time, but
@@ -309,8 +319,24 @@ def calculate_income_and_payroll_tax(plan):
       # Medicare
       medicare_tax = ssm_income*fed_infl['tax']['medicare_rate'][tax_filing]
 
+      # Additional payroll taxes configured on salary income objects
+      payroll_tax_breakdown = {
+        'payroll_tax:Social Security': ss_tax,
+        'payroll_tax:Medicare': medicare_tax
+      }
+      for tax_name in all_payroll_tax_names:
+        payroll_tax_breakdown[f'payroll_tax:{tax_name}'] = pd.Series([0 for _ in plan.cal_year],index=plan.cal_year)
+      for obj in plan.income:
+        if ((obj.person in filers) and (obj.subcategory == 'Salary') and (obj.taxable == True)):
+          if hasattr(obj, 'payroll_taxes') and obj.payroll_taxes:
+            for payroll_tax in obj.payroll_taxes:
+              tax_name = payroll_tax.get('name', '').strip()
+              rate = payroll_tax.get('rate', 0)
+              if tax_name != '' and rate:
+                payroll_tax_breakdown[f'payroll_tax:{tax_name}'] += obj.value * rate
+
       # Totals
-      payroll_tax = ss_tax + medicare_tax
+      payroll_tax = sum(payroll_tax_breakdown.values())
       total_tax = income_tax + payroll_tax
   
       ########  
@@ -332,6 +358,8 @@ def calculate_income_and_payroll_tax(plan):
                 'state_income_tax':state_income_tax,
                 'payroll_tax':payroll_tax,
                 'total_tax':total_tax})
+      for payroll_key, payroll_series in payroll_tax_breakdown.items():
+        tax_df[payroll_key] = payroll_series
       # print(tax_df.head(5))
       tax_df_dict[tax_filing] |= {filer_name:tax_df}
   return(tax_df_dict)
@@ -422,10 +450,22 @@ def balance_and_tax(plan):
     # Create Tax Expense Objects
 
     for filer in plan.tax_df.filer.unique():
-        for col, name in {'state_income_tax':['Income','State'],'fed_income_tax':['Income','Federal'],'payroll_tax':['Payroll','Payroll']}.items():
+        for col, name in {'state_income_tax':['Income','State'],'fed_income_tax':['Income','Federal']}.items():
             tax_series = plan.tax_df.loc[plan.tax_df['filer']==filer, col]
             tax_series = tax_series.replace([np.inf, -np.inf], np.nan).fillna(0).astype(int)
             exp = objs.financial_objects.ExpenseObj(filer,'Tax',name[0],name[1],'',
+                              plan.cal_year,
+                              tax_series,
+                              True,False)
+            plan.expenses.append(exp)
+            plan = exp.project(plan)
+
+        payroll_cols = [col for col in plan.tax_df.columns if col.startswith('payroll_tax:')]
+        for col in payroll_cols:
+            tax_series = plan.tax_df.loc[plan.tax_df['filer']==filer, col]
+            tax_series = tax_series.replace([np.inf, -np.inf], np.nan).fillna(0).astype(int)
+            payroll_name = col.split('payroll_tax:',1)[1]
+            exp = objs.financial_objects.ExpenseObj(filer,'Tax','Payroll',payroll_name,'',
                               plan.cal_year,
                               tax_series,
                               True,False)

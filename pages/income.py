@@ -83,6 +83,37 @@ def remove_pension_from_income(income_id):
     st.session_state['plan'] = income.remove_pension(st.session_state['plan'])
     st.success(f"Pension removed from {income.name}")
 
+def add_payroll_tax_to_income(income_id):
+    """Add a payroll tax add-on to an existing salary income."""
+    utils.ui_functions.sidebar_buttons(False)
+    
+    income = st.session_state['plan'].get_object_from_id(income_id)
+    if income is None or income.subcategory != 'Salary':
+        st.error("Can only add payroll tax to Salary income")
+        return
+    
+    tax_name = st.session_state.get(f'{income_id}_payroll_tax_name', '').strip()
+    tax_rate = st.session_state.get(f'{income_id}_payroll_tax_rate', 0.0)
+    if tax_name == '':
+        st.error("Payroll tax name is required")
+        return
+    
+    income.add_payroll_tax(tax_name, tax_rate)
+    st.session_state['plan'] = income.project(st.session_state['plan'])
+    st.success(f"Payroll tax added to {income.name}")
+
+def remove_payroll_tax_from_income(income_id, tax_index):
+    """Remove a payroll tax add-on from an income."""
+    utils.ui_functions.sidebar_buttons(False)
+    
+    income = st.session_state['plan'].get_object_from_id(income_id)
+    if income is None:
+        return
+    
+    income.remove_payroll_tax(tax_index)
+    st.session_state['plan'] = income.project(st.session_state['plan'])
+    st.success(f"Payroll tax removed from {income.name}")
+
 def update_contribution_rate(income_id, obj):
     """Update only the contribution rate in the expense object."""
     utils.ui_functions.sidebar_buttons(False)
@@ -161,6 +192,31 @@ def add_pension(income_id):
                            key=f'{income_id}_pension_retirement')
         
         submit = st.form_submit_button("Add Pension", on_click=add_pension_to_income, args=[income_id])
+        if submit:
+            st.rerun()
+
+@st.dialog('Add Payroll Tax')
+def add_payroll_tax(income_id):
+    """Dialog to configure and add a payroll tax add-on to an income."""
+    income = st.session_state['plan'].get_object_from_id(income_id)
+    if income is None or income.subcategory != 'Salary':
+        st.error("Can only add payroll tax to Salary income")
+        return
+    
+    with st.form(f"add_payroll_tax_{income_id}"):
+        st.write(f"Adding payroll tax to: {income.name}")
+        st.text_input("Payroll Tax Name",
+                      value="Local Payroll Tax",
+                      key=f'{income_id}_payroll_tax_name')
+        st.number_input("Payroll Tax Rate (Proportion)",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=0.0,
+                        step=0.01,
+                        key=f'{income_id}_payroll_tax_rate',
+                        help="Proportion of salary (0.0 to 1.0)")
+        
+        submit = st.form_submit_button("Add Payroll Tax", on_click=add_payroll_tax_to_income, args=[income_id])
         if submit:
             st.rerun()
 
@@ -336,6 +392,21 @@ def generate_income(income_id,disp_div):
                 # Show Add Pension button
                 st.write("No pension configured")
                 st.button(f"{BUTTON_ADD_PENSION} Add Pension", on_click=add_pension, args=[income_id], key=f"{income_id}_add_pension")
+
+            st.divider()
+            st.write("**Payroll Tax Add-ons**")
+            if hasattr(obj, 'payroll_taxes') and obj.payroll_taxes:
+                for tax_index, payroll_tax in enumerate(obj.payroll_taxes):
+                    tax_name = payroll_tax.get('name', 'Payroll Tax')
+                    tax_rate = payroll_tax.get('rate', 0)
+                    st.write(f"{tax_name}: {tax_rate:.4f}")
+                    st.button("Remove Payroll Tax",
+                              on_click=remove_payroll_tax_from_income,
+                              args=[income_id, tax_index],
+                              key=f"{income_id}_payroll_tax_remove_{tax_index}")
+            else:
+                st.write("No payroll taxes configured")
+            st.button("Add Payroll Tax", on_click=add_payroll_tax, args=[income_id], key=f"{income_id}_add_payroll_tax")
 
         st.button(f"{BUTTON_DELETE} Delete",on_click=remove_income,args=[income_id],key=f"{income_id}_del")
         return(obj)
