@@ -3,7 +3,7 @@
 
 [plan_defaults]
 # Core plan settings
-start_year = 2025
+start_year = 2026
 n_years = 35
 inflation_rate = 0.03
 col_raise_rate = 0.02
