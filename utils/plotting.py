@@ -280,10 +280,10 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     
     if tax_filing == 'joint':
         label_dict = {person:(label_dict[person]|{'Tax':'Tax',
-                                                  'Taxable Income':'Taxable Income'}) for person in label_dict.keys()}
+                                                  'Cash Flow Income':'Cash Flow Income'}) for person in label_dict.keys()}
     else:
         label_dict = {person:(label_dict[person]|{'Tax':'Tax ('+plan.get_object_from_id(person).name+')',
-                                                  'Taxable Income':'Taxable Income ('+plan.get_object_from_id(person).name+')'}) for person in label_dict.keys()}
+                                                  'Cash Flow Income':'Cash Flow Income ('+plan.get_object_from_id(person).name+')'}) for person in label_dict.keys()}
 
     # Make data frames and subset
     inc_df = to_dataframe(plan,people,'income')#,split_joint=False)
@@ -320,7 +320,7 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
 
     # Income
     income = inc.loc[inc['subcategory']!='Employer Match',['person','name','value']].rename(columns={'name':'source'})
-    income = income.merge(pd.DataFrame({'person':label_dict.keys(),'target':[label_dict[person]['Taxable Income'] for person in label_dict.keys()]}))
+    income = income.merge(pd.DataFrame({'person':label_dict.keys(),'target':[label_dict[person]['Cash Flow Income'] for person in label_dict.keys()]}))
     nodes += list(income['source'].unique())
     node_color += ['Income' for _ in income['source'].unique()]
     
@@ -342,7 +342,7 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
         
     # Expense Categories
     posttax_cat = exp.loc[~exp['tax_keyword'].isin(['Traditional','HSA']),['person_split','category','value']].groupby(['person_split','category']).sum().reset_index(drop=False).rename(columns={'category':'target'})
-    posttax_cat = posttax_cat.merge(pd.DataFrame({'person':label_dict.keys(),'source':[label_dict[person]['Taxable Income'] for person in label_dict.keys()]}),left_on='person_split',right_on='person')
+    posttax_cat = posttax_cat.merge(pd.DataFrame({'person':label_dict.keys(),'source':[label_dict[person]['Cash Flow Income'] for person in label_dict.keys()]}),left_on='person_split',right_on='person')
         
     #
     nodes += list(posttax_cat['source'].unique())
