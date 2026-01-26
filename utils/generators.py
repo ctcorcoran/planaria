@@ -189,6 +189,7 @@ def buy_home(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sour
     insurance.paired_attr['time'] |= {asset_id:[['start_year','start_year',0],['end_year','end_year',0]]}
     plan.pairs['time'].append([asset_id,insurance.id])
     plan.expenses.append(insurance)
+    plan = insurance.project(plan)
     
     # Project the home asset, triggering updates of all dependents
     plan = plan.get_object_from_id(asset_id).project(plan)
@@ -250,6 +251,7 @@ def buy_car(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sourc
     insurance.paired_attr['time'] |= {asset_id:[['start_year','start_year',0],['end_year','end_year',0]]}
     plan.pairs['time'].append([asset_id,insurance.id])
     plan.expenses.append(insurance)
+    plan = insurance.project(plan)
     
     # Project auto asset, to project all dependents
     plan = plan.get_object_from_id(asset_id).project(plan)

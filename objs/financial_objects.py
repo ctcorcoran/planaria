@@ -220,7 +220,11 @@ class IncExpObj(FinObj):
         else:
             self.value_input = utils.utilities.expand_contract(self.value_input,self.cal_year)#.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):])
             self.infl_rate = utils.utilities.expand_contract(self.infl_rate,self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):])
-            cumulative_infl = [1 if yr == min(self.cal_year) else pd.Series(1+self.infl_rate.loc[self.cal_year[0]:yr]).product() for yr in self.cal_year] #[1 if yr == min(self.cal_year) else pd.Series(1+self.infl_rate[range(self.cal_year[0],yr)]).product() for yr in self.cal_year]
+            base_year = int(self.start_year)
+            cumulative_infl = [
+                1 if yr == base_year else pd.Series(1+self.infl_rate.loc[base_year:yr-1]).product()
+                for yr in self.cal_year
+            ]
             self.value = (self.value_input * pd.Series(cumulative_infl,index=self.cal_year)).astype(int)
         self.value = utils.utilities.expand_contract(self.value.loc[self.start_year:self.end_year],self.cal_year,val_pad_front=True,val_pad_back=True).astype(int)
         return(self)
@@ -232,7 +236,11 @@ class IncExpObj(FinObj):
             pass
         else:
             self.infl_rate = utils.utilities.expand_contract(self.infl_rate,self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):])
-            cumulative_infl = [1 if yr == min(self.cal_year) else pd.Series(1+self.infl_rate[range(self.cal_year[0],yr)]).product() for yr in self.cal_year]
+            base_year = int(self.start_year)
+            cumulative_infl = [
+                1 if yr == base_year else pd.Series(1+self.infl_rate.loc[base_year:yr-1]).product()
+                for yr in self.cal_year
+            ]
             self.value = (self.value / pd.Series(cumulative_infl,index=self.cal_year)).astype(int)
         return(self)
     
@@ -541,7 +549,7 @@ class AssetObj(FinObj):
 
         self.dependent_objs = True
         plan.expenses.append(exp_obj)
-        #plan = exp_obj.project(plan)
+        plan = exp_obj.project(plan)
         plan.pairs['series'].append([self.id,exp_obj.id])
         plan.pairs['time'].append([self.id,exp_obj.id])
         return(plan)
