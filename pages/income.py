@@ -209,11 +209,23 @@ def update_income(income_id,obj,attr):
             multi = 12
         else:
             multi = 1
-        if st.session_state[f'{income_id}_val_entry']=='Manual':
-            st.write(st.session_state[f"{income_id}_"+attr])
-            setattr(obj,attr,multi*pd.Series(st.session_state[f"{income_id}_"+attr]))
+        raw_value = st.session_state.get(f"{income_id}_"+attr)
+        if isinstance(raw_value, pd.Series):
+            value_series = raw_value.copy()
+            value_series.index = value_series.index.astype(int)
+        elif isinstance(raw_value, pd.DataFrame):
+            if raw_value.shape[1] == 1:
+                value_series = raw_value.iloc[:, 0]
+            else:
+                value_series = pd.Series(raw_value.squeeze())
+            value_series.index = value_series.index.astype(int)
         else:
-            setattr(obj,attr,multi*pd.Series(st.session_state[f"{income_id}_"+attr].set_axis(st.session_state[f"{income_id}_"+attr].index.astype(int))))
+            value_series = pd.Series([raw_value for _ in st.session_state['plan'].cal_year],
+                                     index=st.session_state['plan'].cal_year)
+        if obj.fixed:
+            setattr(obj, attr, multi * value_series)
+        else:
+            obj.value_input = multi * value_series
         
     else:
         setattr(obj,attr,st.session_state[f"{income_id}_"+attr])
