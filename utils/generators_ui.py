@@ -67,6 +67,8 @@ def add_asset_to_plan(asset_type,existing,down_payment_sources,session_state):
     # PARAMS
     asset_params = {'maintenance_rate':st.session_state['maintenance_rate_new'],
                     'insurance':st.session_state['insurance_new']}
+    if asset_type == 'home':
+        asset_params |= {'maintenance_cap': st.session_state.get('maintenance_cap_new', 0.0)}
     
     # Add property tax for a house
     if asset_type == 'home':
@@ -254,6 +256,12 @@ def add_asset(asset_type,existing,session_state):
             maintenance_default = 0.015
             insurance_default = 1500
             asset_type_ = 'Home'
+            st.number_input("Maintenance Cap (Start Year $)",
+                            min_value=0.0,
+                            value=0.0,
+                            step=100.0,
+                            key="maintenance_cap_new",
+                            help="Optional cap in start-year dollars (0 = no cap)")
         elif asset_type == 'car':
             maintenance_default = 0.1
             insurance_default = 1000
@@ -510,10 +518,15 @@ def generate_asset(asset_id,session_state):
                             key=f"{asset_id}_property_tax_rate")
         # Get Maintenance Object and Rate
         maint_obj = [obj_ for obj_ in st.session_state['plan'].expenses if (obj.id in [key for inner_dict in obj_.paired_attr.values() for key in inner_dict.keys()] and 'Maintenance' in obj_.name)][0]
-        if isinstance(maint_obj.paired_attr['series'][asset_id][0][2],pd.Series):
-            maint_rate = maint_obj.paired_attr['series'][asset_id][0][2][maint_obj.start_year]
+        maint_pair = maint_obj.paired_attr['series'][asset_id][0][2]
+        if isinstance(maint_pair,(list,tuple)) and len(maint_pair) == 2:
+            maint_rate = maint_pair[0]
+            maint_cap = maint_pair[1] if maint_pair[1] is not None else 0.0
         else:
-            maint_rate = maint_obj.paired_attr['series'][asset_id][0][2]    
+            maint_rate = maint_pair
+            maint_cap = 0.0
+        if isinstance(maint_rate,pd.Series):
+            maint_rate = maint_rate[maint_obj.start_year]
         st.number_input("Maintenance Rate",
                         min_value=0.0,
                         max_value=1.0,
@@ -523,6 +536,14 @@ def generate_asset(asset_id,session_state):
                         on_change=update_asset,
                         args=[[asset_id]+paired_ids,'maintenance_rate',session_state],
                         key=f"{asset_id}_maintenance_rate")
+        if obj.subcategory == 'Real Estate':
+            st.number_input("Maintenance Cap (Start Year $)",
+                            min_value=0.0,
+                            value=maint_cap,
+                            step=100.0,
+                            on_change=update_asset,
+                            args=[[asset_id]+paired_ids,'maintenance_cap',session_state],
+                            key=f"{asset_id}_maintenance_cap")
         
         # Get Insurance Object and Value
         ins_obj = [obj_ for obj_ in st.session_state['plan'].expenses if (obj.id in [key for inner_dict in obj_.paired_attr.values() for key in inner_dict.keys()] and 'Insurance' in obj_.name)][0]
@@ -602,10 +623,6 @@ def update_asset(id_list,attr,session_state):
             liab_obj.start_year = start_year
         else:
             asset_obj.start_year = start_year
-
-        # Ensure dependent projections fire when start year changes
-        if any(pair[0] == asset_id for lst in st.session_state['plan'].pairs.values() for pair in lst):
-            asset_obj.dependent_objs = True
     
     elif attr == 'value':
         asset_obj.value = st.session_state[f'{asset_id}_value']
@@ -762,7 +779,21 @@ def update_asset(id_list,attr,session_state):
         
     elif attr == 'maintenance_rate':
         maintenance_obj = [obj for obj in st.session_state['plan'].expenses if obj.id in id_list and 'Maintenance' in obj.name][0]
-        maintenance_obj.paired_attr['series'][asset_id][2] = st.session_state[f'{asset_id}_maintenance_rate']
+        pair_val = maintenance_obj.paired_attr['series'][asset_id][0][2]
+        cap_val = None
+        if isinstance(pair_val,(list,tuple)) and len(pair_val) == 2:
+            cap_val = pair_val[1]
+        maintenance_obj.paired_attr['series'][asset_id][0][2] = (st.session_state[f'{asset_id}_maintenance_rate'], cap_val)
+        
+    elif attr == 'maintenance_cap':
+        maintenance_obj = [obj for obj in st.session_state['plan'].expenses if obj.id in id_list and 'Maintenance' in obj.name][0]
+        cap_value = float(st.session_state.get(f'{asset_id}_maintenance_cap', 0.0) or 0.0)
+        pair_val = maintenance_obj.paired_attr['series'][asset_id][0][2]
+        prop_val = pair_val
+        if isinstance(pair_val,(list,tuple)) and len(pair_val) == 2:
+            prop_val = pair_val[0]
+        cap_val = cap_value if cap_value > 0 else None
+        maintenance_obj.paired_attr['series'][asset_id][0][2] = (prop_val, cap_val)
         
     elif attr == 'property_tax_rate':
         property_tax_obj = [obj for obj in st.session_state['plan'].expenses if obj.id in id_list and 'Property Tax' in obj.name][0]

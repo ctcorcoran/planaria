@@ -123,18 +123,63 @@ class FinObj:
         for parent in self.paired_attr['series'].keys():
             # Employer match should only have one parent - the income paired with the 401k
             if self.subcategory == 'Employer Match':
-                props = pd.concat([utils.utilities.expand_contract(pair[2],self.cal_year) for pair in self.paired_attr['series'][parent]], axis=1).min(axis=1)
+                props_list = []
+                cap_series_list = []
+                for pair in self.paired_attr['series'][parent]:
+                    pair_prop = pair[2]
+                    if isinstance(pair_prop,(list,tuple)) and len(pair_prop) == 2:
+                        prop, cap = pair_prop
+                    else:
+                        prop, cap = pair_prop, None
+                    props_list.append(utils.utilities.expand_contract(prop, self.cal_year))
+                    if cap is not None:
+                        infl_rate = utils.utilities.expand_contract(plan.infl_rate, self.cal_year)
+                        cap_start_year = int(self.start_year)
+                        cumulative_infl = [
+                            1 if yr == cap_start_year else pd.Series(1+infl_rate.loc[cap_start_year:yr-1]).product()
+                            for yr in self.cal_year
+                        ]
+                        if isinstance(cap, pd.Series):
+                            cap_series = utils.utilities.expand_contract(cap, self.cal_year)
+                        else:
+                            cap_series = pd.Series(cap, index=self.cal_year)
+                        cap_series = cap_series * pd.Series(cumulative_infl,index=self.cal_year)
+                        cap_series_list.append(cap_series)
+                props = pd.concat(props_list, axis=1).min(axis=1)
+                series_val = props * getattr(plan.get_object_from_id(parent),self.paired_attr['series'][parent][0][0])
+                if len(cap_series_list) > 0:
+                    cap_series = pd.concat(cap_series_list, axis=1).min(axis=1)
+                    series_val = series_val.combine(cap_series, min)
                 setattr(self,
                         self.paired_attr['series'][parent][0][1],
-                        props * getattr(plan.get_object_from_id(parent),self.paired_attr['series'][parent][0][0]))
+                        series_val)
             else:
                 for pair in self.paired_attr['series'][parent]:
-                    props = utils.utilities.expand_contract(pair[2],self.cal_year)
-                    
-                    if pair[1] not in temp_series:
-                        temp_series |= {pair[1]:props*getattr(plan.get_object_from_id(parent),pair[0])}
+                    pair_prop = pair[2]
+                    if isinstance(pair_prop,(list,tuple)) and len(pair_prop) == 2:
+                        prop, cap = pair_prop
                     else:
-                        temp_series[pair[1]] += props*getattr(plan.get_object_from_id(parent),pair[0])
+                        prop, cap = pair_prop, None
+                    props = utils.utilities.expand_contract(prop, self.cal_year)
+                    series_val = props * getattr(plan.get_object_from_id(parent),pair[0])
+                    if cap is not None:
+                        infl_rate = utils.utilities.expand_contract(plan.infl_rate, self.cal_year)
+                        cap_start_year = int(self.start_year)
+                        cumulative_infl = [
+                            1 if yr == cap_start_year else pd.Series(1+infl_rate.loc[cap_start_year:yr-1]).product()
+                            for yr in self.cal_year
+                        ]
+                        if isinstance(cap, pd.Series):
+                            cap_series = utils.utilities.expand_contract(cap, self.cal_year)
+                        else:
+                            cap_series = pd.Series(cap, index=self.cal_year)
+                        cap_series = cap_series * pd.Series(cumulative_infl,index=self.cal_year)
+                        series_val = series_val.combine(cap_series, min)
+
+                    if pair[1] not in temp_series:
+                        temp_series |= {pair[1]:series_val}
+                    else:
+                        temp_series[pair[1]] += series_val
         for key in temp_series.keys():
             setattr(self,key,temp_series[key])
                     
@@ -540,7 +585,7 @@ class AssetObj(FinObj):
         #self.equity = self.value - self.liab_value
         return(self)     
     
-    def make_expense_obj(self,plan,keyword,props=1.0):
+    def make_expense_obj(self,plan,keyword,props=1.0,cap=None):
         """Create related expense objects (contribution, maintenance, tax)."""
         if keyword == 'contribution':
             exp_obj = ExpenseObj(self.person,'Savings',self.subcategory,self.name,self.tax_keyword,self.cal_year,0,
@@ -552,7 +597,8 @@ class AssetObj(FinObj):
             exp_obj = ExpenseObj(self.person,'Necessary',self.name,self.name+' Maintenance','',self.cal_year,self.value,
                                  True,False,
                                  {'start_year':self.start_year,'end_year':self.end_year})
-            exp_obj.paired_attr['series'] |= {self.id:[['value','value',props]]}
+            prop_value = (props, cap) if (cap is not None and cap > 0) else props
+            exp_obj.paired_attr['series'] |= {self.id:[['value','value',prop_value]]}
             exp_obj.paired_attr['time'] |= {self.id:[['start_year','start_year',0],['end_year','end_year',0]]}
 
         elif keyword == 'tax':

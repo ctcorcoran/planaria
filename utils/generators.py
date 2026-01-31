@@ -165,8 +165,13 @@ def buy_home(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sour
     liab_dict = liab_dict | {'cat':'Installment','subcat':'Mortgage','name':'Mortgage'}
     plan, asset_id = buy_asset_with_liability(plan,person,start_year,{'asset':'','liability':'Mortgage'},value,asset_dict,liab_dict,down_payment_sources)
     
-    # Maintenance
-    plan = plan.get_object_from_id(asset_id).make_expense_obj(plan,'maintenance',home_params['maintenance_rate'])
+    # Maintenance (optional cap)
+    plan = plan.get_object_from_id(asset_id).make_expense_obj(
+        plan,
+        'maintenance',
+        home_params['maintenance_rate'],
+        cap=home_params.get('maintenance_cap', None)
+    )
     
     # Property Tax
     plan = plan.get_object_from_id(asset_id).make_expense_obj(plan,'tax',home_params['property_tax_rate'])

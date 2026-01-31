@@ -57,10 +57,14 @@ def add_asset_to_plan(keyword):
     st.session_state['plan'].assets.append(asset_obj)
 
     if keyword == '401k':
+        props_cap = st.session_state.get('props_cap_new', 0.0)
+        match_cap = st.session_state.get('match_props_cap_new', 0.0)
+        props = (st.session_state['props_new'], None if props_cap == 0 else props_cap)
+        match_props_max = (st.session_state['match_props_max_new'], None if match_cap == 0 else match_cap)
         st.session_state['plan'] = asset_obj.make_401k_objs(st.session_state['plan'],
                                                             inc_id,
-                                                            st.session_state['props_new'],
-                                                            st.session_state['match_props_max_new'])
+                                                            props,
+                                                            match_props_max)
     else:
         st.session_state['plan'] = asset_obj.make_expense_obj(st.session_state['plan'],'contribution')
     
@@ -117,6 +121,12 @@ def add_asset(keyword):
                             step=0.001,
                             format="%0.3g",
                             key='props_new')
+            st.number_input('Contribution Cap (Start Year $)',
+                            min_value=0.0,
+                            value=0.0,
+                            step=100.0,
+                            key='props_cap_new',
+                            help="Optional cap in start-year dollars (0 = no cap)")
             st.number_input('Employer Match Prop.',
                             min_value=0.0,
                             max_value=1.0,
@@ -124,6 +134,12 @@ def add_asset(keyword):
                             step=0.001,
                             format="%0.3g",
                             key='match_props_max_new')
+            st.number_input('Employer Match Cap (Start Year $)',
+                            min_value=0.0,
+                            value=0.0,
+                            step=100.0,
+                            key='match_props_cap_new',
+                            help="Optional cap in start-year dollars (0 = no cap)")
         else:
             with col1:
                 st.number_input("Contribution",
@@ -162,10 +178,38 @@ def update_asset(asset_id,obj,attr):
             setattr(obj,attr,multi*pd.Series(st.session_state[f"{asset_id}_"+attr].set_axis(st.session_state[f"{asset_id}_"+attr].index.astype(int))))
         
     elif attr == 'props':
+        prop_key = [key for key, val in obj.paired_attr['series'].items() if key.split('_')[0]=='Income' and val[0][1]=='contribution'][0]
+        pair_val = obj.paired_attr['series'][prop_key][0][2]
+        cap_val = None
+        if isinstance(pair_val,(list,tuple)) and len(pair_val) == 2:
+            cap_val = pair_val[1]
         if st.session_state[f'{asset_id}_prop_entry']=='Auto':
-            setattr(obj,attr,st.session_state[f"{asset_id}_"+attr])
+            new_prop = st.session_state[f"{asset_id}_"+attr]
         else:
-            setattr(obj,attr,pd.Series(st.session_state[f"{asset_id}_"+attr].set_axis(st.session_state[f"{asset_id}_"+attr].index.astype(int))))
+            new_prop = pd.Series(st.session_state[f"{asset_id}_"+attr].set_axis(st.session_state[f"{asset_id}_"+attr].index.astype(int)))
+        obj.paired_attr['series'][prop_key][0][2] = (new_prop, cap_val)
+    
+    elif attr == 'props_cap':
+        prop_key = [key for key, val in obj.paired_attr['series'].items() if key.split('_')[0]=='Income' and val[0][1]=='contribution'][0]
+        pair_val = obj.paired_attr['series'][prop_key][0][2]
+        prop_val = pair_val[0] if isinstance(pair_val,(list,tuple)) and len(pair_val) == 2 else pair_val
+        cap_val = st.session_state.get(f"{asset_id}_props_cap", 0.0)
+        obj.paired_attr['series'][prop_key][0][2] = (prop_val, None if cap_val == 0 else cap_val)
+    
+    elif attr == 'match_cap':
+        prop_key = [key for key, val in obj.paired_attr['series'].items() if key.split('_')[0]=='Income' and val[0][1]=='contribution'][0]
+        match_obj = None
+        for inc_obj in st.session_state['plan'].income:
+            if inc_obj.subcategory == 'Employer Match' and prop_key in inc_obj.paired_attr['series']:
+                match_obj = inc_obj
+                break
+        if match_obj is not None:
+            match_pairs = match_obj.paired_attr['series'][prop_key]
+            match_pair_index = 1 if len(match_pairs) > 1 else 0
+            match_pair_val = match_pairs[match_pair_index][2]
+            match_prop_val = match_pair_val[0] if isinstance(match_pair_val,(list,tuple)) and len(match_pair_val) == 2 else match_pair_val
+            cap_val = st.session_state.get(f"{asset_id}_match_cap", 0.0)
+            match_obj.paired_attr['series'][prop_key][match_pair_index][2] = (match_prop_val, None if cap_val == 0 else cap_val)
     
     else:
         setattr(obj,attr,st.session_state[f"{asset_id}_"+attr])
@@ -215,7 +259,10 @@ def generate_asset(asset_id):
         if 'Income' in [x.split('_')[0] for x in obj.paired_attr['series'].keys()]: #obj.tax_keyword == '401k':
             # Get the key for the paired income, and then get the proportions
             prop_key = [key for key, val in obj.paired_attr['series'].items() if key.split('_')[0]=='Income' and val[0][1]=='contribution'][0]
-            prop = obj.paired_attr['series'][prop_key][0][2] #[val[0] for key, val in obj.paired_attr['series'].items() if key.split('_')[0]=='Income' and val[0][1]=='contribution'][2]
+            prop = obj.paired_attr['series'][prop_key][0][2]
+            prop_cap = None
+            if isinstance(prop,(list,tuple)) and len(prop) == 2:
+                prop, prop_cap = prop
             # Set both auto and manual props, and default setting
             if isinstance(prop,pd.Series):
                 prop_auto = prop[obj.start_year]
@@ -250,9 +297,37 @@ def generate_asset(asset_id):
                                               key=f'{asset_id}_props_editor')
                 if save_props:
                     utils.ui_functions.sidebar_buttons(False)
-                    obj.paired_attr['series'][prop_key][0][2] = edited_props.set_axis(obj.cal_year)
+                    obj.paired_attr['series'][prop_key][0][2] = (edited_props.set_axis(obj.cal_year), prop_cap)
                     st.session_state['plan'] = obj.project(st.session_state['plan'])
                     st.rerun()
+            st.number_input('Contribution Cap (Start Year $)',
+                            min_value=0.0,
+                            value=0.0 if prop_cap is None else float(prop_cap),
+                            step=100.0,
+                            on_change=update_asset,
+                            args=[asset_id,obj,'props_cap'],
+                            key=f'{asset_id}_props_cap')
+
+            # Employer match cap (if match income object exists)
+            match_obj = None
+            for inc_obj in st.session_state['plan'].income:
+                if inc_obj.subcategory == 'Employer Match' and prop_key in inc_obj.paired_attr['series']:
+                    match_obj = inc_obj
+                    break
+            if match_obj is not None:
+                match_pairs = match_obj.paired_attr['series'][prop_key]
+                match_prop_pair = match_pairs[1] if len(match_pairs) > 1 else match_pairs[0]
+                match_prop = match_prop_pair[2]
+                match_cap = None
+                if isinstance(match_prop,(list,tuple)) and len(match_prop) == 2:
+                    match_prop, match_cap = match_prop
+                st.number_input('Employer Match Cap (Start Year $)',
+                                min_value=0.0,
+                                value=0.0 if match_cap is None else float(match_cap),
+                                step=100.0,
+                                on_change=update_asset,
+                                args=[asset_id,obj,'match_cap'],
+                                key=f'{asset_id}_match_cap')
 
         # Don't include this editor for the first entry in each drawdown, since those contributions
         # are handled in .balance_and_tax()
