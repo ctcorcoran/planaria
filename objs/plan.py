@@ -155,7 +155,17 @@ class Plan:
         # Change external lists: pairs, events, drawdown order   
         self.pairs = {key:[[replace_dict[pair[0]],replace_dict[pair[1]]] for pair in self.pairs[key]] for key in ['series','time','share']}
         self.drawdown_order = {key:[replace_dict[obj_id] for obj_id in val] for key, val in self.drawdown_order.items()}
-        self.events = [[x[0],x[1],replace_dict[x[2]]] for x in self.events]
+        updated_events = []
+        for year, label, payload in self.events:
+            # Update payload if it's an object ID or a dict containing IDs
+            if isinstance(payload, dict):
+                payload = copy.deepcopy(payload)
+                if 'sources' in payload:
+                    payload['sources'] = [(replace_dict.get(src, src), prop) for src, prop in payload['sources']]
+                updated_events.append([year, label, payload])
+            else:
+                updated_events.append([year, label, replace_dict.get(payload, payload)])
+        self.events = updated_events
         
         return(self)
     
