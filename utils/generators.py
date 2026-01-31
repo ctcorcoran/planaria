@@ -243,7 +243,7 @@ def buy_car(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sourc
                                 plan.cal_year,
                                 car_params['insurance'],
                                 False,
-                                True,
+                                False,
                                 {'infl_rate':plan.infl_rate})
     # Mark as future event object if created for future purchase
     if start_year > plan.start_year:

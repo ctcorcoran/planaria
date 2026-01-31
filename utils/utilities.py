@@ -95,6 +95,28 @@ def json_to_plan(json_string):
             else:
                 objs.financial_objects.LiabObj.counter = 0 
             value = [dict_to_object(x) for x in load_plan[key]]
+            # Ensure class counters continue from highest existing ID
+            def _max_id_suffix(objs_list, prefix):
+                max_id = 0
+                for obj in objs_list:
+                    obj_id = getattr(obj, 'id', '')
+                    if isinstance(obj_id, str) and obj_id.startswith(prefix + '_'):
+                        try:
+                            max_id = max(max_id, int(obj_id.split('_')[-1]))
+                        except ValueError:
+                            pass
+                return max_id
+
+            if key == 'people':
+                objs.plan.Person.counter = _max_id_suffix(value, 'Person')
+            elif key == 'income':
+                objs.financial_objects.IncomeObj.counter = _max_id_suffix(value, 'Income')
+            elif key == 'expenses':
+                objs.financial_objects.ExpenseObj.counter = _max_id_suffix(value, 'Expense')
+            elif key == 'assets':
+                objs.financial_objects.AssetObj.counter = _max_id_suffix(value, 'Asset')
+            else:
+                objs.financial_objects.LiabObj.counter = _max_id_suffix(value, 'Liability')
         elif key in ['tax_df','analytical_timeseries']:
             value = pd.DataFrame(value)
             value.index = pd.to_numeric(value.index)
