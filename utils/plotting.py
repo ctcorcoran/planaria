@@ -171,9 +171,6 @@ def expense_plots(plan,people,level,after_tax=False):
     elif level == 'name':
         level_list = ['category','subcategory','name']    
     
-    # df = pd.concat(all_exp)
-    df = to_dataframe(plan, people, 'expenses')
-    
     exp_grouped = df.loc[df['person_split'].isin(people),level_list+['cal_year','value']].groupby(level_list+['cal_year'],as_index=False).sum(numeric_only=None)
     after_tax_exp_grouped = exp_grouped.loc[exp_grouped['category']!='Tax',:] #.groupby(['category','subcategory','owner','cal_year'],as_index=False).sum(numeric_only=None)
     
@@ -198,6 +195,16 @@ def expense_plots(plan,people,level,after_tax=False):
                        groupnorm='percent',
                        color_discrete_map=col_dict,
                        template='seaborn')
+    # Add income overlay for context
+    income_people = [person.id for person in plan.people if person.dependent == False] if joint_view else people
+    income_df = to_dataframe(plan, income_people, 'income')
+    income_df = income_df.loc[income_df['subcategory']!='Employer Match',:]
+    income_series = income_df.loc[income_df['person_split'].isin(income_people),['cal_year','value']].groupby('cal_year').sum(numeric_only=True)['value']
+    fig.add_traces(go.Scatter(x=income_series.index,
+                              y=income_series.values,
+                              name='Income',
+                              line=dict(color='#222222', dash='dash'),
+                              mode='lines'))
     return({'df':exp_grouped,'fig':fig})
 
 
