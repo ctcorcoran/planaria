@@ -263,27 +263,31 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     # Never forget - though this visualization may seem "extra", it will
     # expose any flaws in the balancing process
     
+    joint_view = (people == 'Joint')
     people = make_people_list(plan,people)
+    debug_sankey = True  # TODO: remove or set False after debugging
 
     tax_filing = plan.tax_df['filing_status'].loc[year]
     if isinstance(tax_filing,pd.Series):
         tax_filing = tax_filing.unique()[0]
     
+    joint_rollup = joint_view and (tax_filing == 'joint')
+    label_people = ['Joint'] if joint_rollup else people
     if comb_all_exp == True:
         label_dict = {person:{'Savings':'Savings',
                               'Necessary':'Necessary',
-                              'Discretionary':'Discretionary'} for person in people}
+                              'Discretionary':'Discretionary'} for person in label_people}
     else:
-        label_dict = {person:{'Savings':'Savings ('+plan.get_object_from_id(person).name+')',
-                              'Necessary':'Necessary ('+plan.get_object_from_id(person).name+')',
-                              'Discretionary':'Discretionary ('+plan.get_object_from_id(person).name+')'} for person in people}
+        label_dict = {person:{'Savings':'Savings' if person == 'Joint' else 'Savings ('+plan.get_object_from_id(person).name+')',
+                              'Necessary':'Necessary' if person == 'Joint' else 'Necessary ('+plan.get_object_from_id(person).name+')',
+                              'Discretionary':'Discretionary' if person == 'Joint' else 'Discretionary ('+plan.get_object_from_id(person).name+')'} for person in label_people}
     
     if tax_filing == 'joint':
         label_dict = {person:(label_dict[person]|{'Tax':'Tax',
-                                                  'Cash Flow Income':'Cash Flow Income'}) for person in label_dict.keys()}
+                                                  'Taxable Income':'Taxable Income'}) for person in label_dict.keys()}
     else:
         label_dict = {person:(label_dict[person]|{'Tax':'Tax ('+plan.get_object_from_id(person).name+')',
-                                                  'Cash Flow Income':'Cash Flow Income ('+plan.get_object_from_id(person).name+')'}) for person in label_dict.keys()}
+                                                  'Taxable Income':'Taxable Income ('+plan.get_object_from_id(person).name+')'}) for person in label_dict.keys()}
 
     # Make data frames and subset
     inc_df = to_dataframe(plan,people,'income')#,split_joint=False)
@@ -293,6 +297,18 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     #
     exp_df = to_dataframe(plan,people,'expenses',incl_tax_keyword=True)
     exp = exp_df.loc[(exp_df['cal_year']==year)&(exp_df['value']>0.0)].reset_index(drop=True)
+
+    if joint_rollup:
+        inc['person_split'] = 'Joint'
+        inc['person'] = 'Joint'
+        exp['person_split'] = 'Joint'
+        exp['person'] = 'Joint'
+
+    if debug_sankey:
+        print(f"[sankey] year={year} joint_view={joint_view} tax_filing={tax_filing} joint_rollup={joint_rollup}")
+        print(f"[sankey] label_people={list(label_dict.keys())}")
+        print(f"[sankey] inc_head=\n{inc.head(10)}")
+        print(f"[sankey] exp_head=\n{exp.head(10)}")
     
     # Pull employer match and add to expenses:
     # match_to_add = inc.loc[inc['subcategory']=='Employer Match',:].reset_index(drop=True)
@@ -300,7 +316,7 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     # exp = pd.concat([exp,match_to_add]).reset_index(drop=True)
     
     # Get person names instead of ID for non-joint expenses, etc..
-    inc.loc[inc['person']!='Joint','name'] = inc.loc[inc['person']!='Joint','subcategory'] + ' ('+inc.loc[inc['person']!='Joint','person'].apply(lambda x: plan.get_object_from_id(x).name)+')'
+    inc.loc[inc['person_split']!='Joint','name'] = inc.loc[inc['person_split']!='Joint','subcategory'] + ' ('+inc.loc[inc['person_split']!='Joint','person_split'].apply(lambda x: plan.get_object_from_id(x).name)+')'
     
     if comb_all_exp == False:
         exp.loc[(exp['person']!='Joint')&(exp['category']!='Tax'),'category'] += ' ('+exp.loc[(exp['person']!='Joint')&(exp['category']!='Tax'),'person'].apply(lambda x: plan.get_object_from_id(x).name)+')'
@@ -319,8 +335,8 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     node_color = []
 
     # Income
-    income = inc.loc[inc['subcategory']!='Employer Match',['person','name','value']].rename(columns={'name':'source'})
-    income = income.merge(pd.DataFrame({'person':label_dict.keys(),'target':[label_dict[person]['Cash Flow Income'] for person in label_dict.keys()]}))
+    income = inc.loc[inc['subcategory']!='Employer Match',['person_split','name','value']].rename(columns={'name':'source','person_split':'person'})
+    income = income.merge(pd.DataFrame({'person':label_dict.keys(),'target':[label_dict[person]['Taxable Income'] for person in label_dict.keys()]}))
     nodes += list(income['source'].unique())
     node_color += ['Income' for _ in income['source'].unique()]
     
@@ -332,7 +348,10 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     # print(employer_match_)
     
     # Tax-exempt Savings
-    pretax = exp.loc[exp['tax_keyword'].isin(['Traditional','HSA'])&(exp['id'].apply(lambda x: x.split('_')[0]) != 'Income'),['person','name','value']].rename(columns={'name':'target'})
+    pretax_mask = exp['tax_keyword'].fillna('').isin(['Traditional','HSA']) & (exp['id'].apply(lambda x: x.split('_')[0]) != 'Income')
+    pretax = exp.loc[pretax_mask,['person_split','name','value']].rename(columns={'name':'target','person_split':'person'})
+    if debug_sankey:
+        print(f"[sankey] pretax_raw=\n{pretax}")
     pretax_grouped = pretax.loc[:,['person','value']].groupby('person').sum().reset_index(drop=False)
     pretax_grouped = pretax_grouped.merge(income[['person','source']],on='person')
     pretax_grouped = pretax_grouped.merge(pd.DataFrame({'person':label_dict.keys(),'target':[label_dict[person]['Savings'] for person in label_dict.keys()]}))
@@ -341,8 +360,19 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
         income.loc[income.index==income.loc[(income['person']==person),'value'].idxmax(),'value'] -= pretax_grouped.loc[pretax_grouped['person']==person,'value']   
         
     # Expense Categories
-    posttax_cat = exp.loc[~exp['tax_keyword'].isin(['Traditional','HSA']),['person_split','category','value']].groupby(['person_split','category']).sum().reset_index(drop=False).rename(columns={'category':'target'})
-    posttax_cat = posttax_cat.merge(pd.DataFrame({'person':label_dict.keys(),'source':[label_dict[person]['Cash Flow Income'] for person in label_dict.keys()]}),left_on='person_split',right_on='person')
+    posttax_cat = exp.loc[~pretax_mask,['person_split','category','value']].groupby(['person_split','category']).sum().reset_index(drop=False).rename(columns={'category':'target'})
+    if debug_sankey:
+        posttax_raw = exp.loc[~pretax_mask,['person_split','category','subcategory','name','value']]
+        print(f"[sankey] posttax_raw=\n{posttax_raw}")
+    posttax_cat = posttax_cat.merge(pd.DataFrame({'person':label_dict.keys(),'source':[label_dict[person]['Taxable Income'] for person in label_dict.keys()]}),left_on='person_split',right_on='person')
+
+    if debug_sankey:
+        income_totals = income.groupby('person')['value'].sum().reset_index(drop=False)
+        pretax_totals = pretax_grouped.copy()
+        posttax_totals = posttax_cat.groupby('person')['value'].sum().reset_index(drop=False)
+        print(f"[sankey] income_totals=\n{income_totals}")
+        print(f"[sankey] pretax_totals=\n{pretax_totals}")
+        print(f"[sankey] posttax_totals=\n{posttax_totals}")
         
     #
     nodes += list(posttax_cat['source'].unique())
