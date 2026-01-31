@@ -218,6 +218,10 @@ def add_asset(asset_type,existing,session_state):
         
         # If New - replacement assets/expenses
         if existing == False:
+            exp_replace_options = [obj.id for obj in st.session_state['plan'].expenses
+                                   if obj.category == 'Necessary'
+                                   and len(obj.paired_attr['series']) == 0
+                                   and not obj.future_event]
             st.multiselect('Assets Replaced',
                            options = [obj.id for obj in st.session_state['plan'].assets if obj.subcategory == subcat],
                            default=None,
@@ -225,7 +229,7 @@ def add_asset(asset_type,existing,session_state):
                            key='assets_replaced_new')
             #
             st.multiselect('Expenses Replaced',
-                           options = [obj.id for obj in st.session_state['plan'].expenses if obj.category == 'Necessary' and len(obj.paired_attr['series']) == 0],
+                           options = exp_replace_options,
                            default=None,
                            format_func=format_name,
                            key='expenses_replaced_new')
@@ -448,8 +452,12 @@ def generate_asset(asset_id,session_state):
                            on_change=update_asset,
                            args=[[asset_id]+paired_ids,'assets_replaced',session_state],
                            key=f'{asset_id}_assets_replaced')
+            exp_replace_options = [obj.id for obj in st.session_state['plan'].expenses
+                                   if obj.category == 'Necessary'
+                                   and len(obj.paired_attr['series']) == 0
+                                   and not obj.future_event]
             st.multiselect('Expenses Replaced',
-                           options = [obj.id for obj in st.session_state['plan'].expenses if obj.category == 'Necessary' and len(obj.paired_attr['series']) == 0],
+                           options = exp_replace_options,
                            default = [obj_.id for obj_ in st.session_state['plan'].expenses if obj_.id in paired_ids and obj_.paired_attr['time'][asset_id][0][2]==-1],
                            format_func=format_name,
                            on_change=update_asset,

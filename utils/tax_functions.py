@@ -406,16 +406,6 @@ def balance_and_tax(plan):
     #    plan.expenses.pop(ind)
     plan.expenses = [exp for exp in plan.expenses if ((exp.category != 'Tax') | (exp.subcategory not in ['Income','Payroll']))]
 
-    # Flag missing expense components (quiet unless issues detected)
-    missing_components = []
-    for exp in plan.expenses:
-        if exp.person == 'Joint' and hasattr(exp, 'components'):
-            for person_id, comp in exp.components.items():
-                if comp is None:
-                    missing_components.append((exp.name, exp.subcategory, person_id))
-    if len(missing_components) > 0:
-        print(f"[balance_and_tax] missing expense components: {missing_components}")
-
     # This is about determining the best tax filing scenario
     total_tax_list = []
     full_tax_list = []

@@ -265,8 +265,6 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     
     joint_view = (people == 'Joint')
     people = make_people_list(plan,people)
-    debug_sankey = True  # TODO: remove or set False after debugging
-
     tax_filing = plan.tax_df['filing_status'].loc[year]
     if isinstance(tax_filing,pd.Series):
         tax_filing = tax_filing.unique()[0]
@@ -304,12 +302,6 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
         exp['person_split'] = 'Joint'
         exp['person'] = 'Joint'
 
-    if debug_sankey:
-        print(f"[sankey] year={year} joint_view={joint_view} tax_filing={tax_filing} joint_rollup={joint_rollup}")
-        print(f"[sankey] label_people={list(label_dict.keys())}")
-        print(f"[sankey] inc_head=\n{inc.head(10)}")
-        print(f"[sankey] exp_head=\n{exp.head(10)}")
-    
     # Pull employer match and add to expenses:
     # match_to_add = inc.loc[inc['subcategory']=='Employer Match',:].reset_index(drop=True)
     # match_to_add.loc[:,['category','subcategory','tax_keyword']] = exp.loc[exp['tax_keyword']=='401k',['category','subcategory','tax_keyword']].reset_index(drop=True)
@@ -350,8 +342,6 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     # Tax-exempt Savings
     pretax_mask = exp['tax_keyword'].fillna('').isin(['Traditional','HSA']) & (exp['id'].apply(lambda x: x.split('_')[0]) != 'Income')
     pretax = exp.loc[pretax_mask,['person_split','name','value']].rename(columns={'name':'target','person_split':'person'})
-    if debug_sankey:
-        print(f"[sankey] pretax_raw=\n{pretax}")
     pretax_grouped = pretax.loc[:,['person','value']].groupby('person').sum().reset_index(drop=False)
     pretax_grouped = pretax_grouped.merge(income[['person','source']],on='person')
     pretax_grouped = pretax_grouped.merge(pd.DataFrame({'person':label_dict.keys(),'target':[label_dict[person]['Savings'] for person in label_dict.keys()]}))
@@ -361,18 +351,7 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
         
     # Expense Categories
     posttax_cat = exp.loc[~pretax_mask,['person_split','category','value']].groupby(['person_split','category']).sum().reset_index(drop=False).rename(columns={'category':'target'})
-    if debug_sankey:
-        posttax_raw = exp.loc[~pretax_mask,['person_split','category','subcategory','name','value']]
-        print(f"[sankey] posttax_raw=\n{posttax_raw}")
     posttax_cat = posttax_cat.merge(pd.DataFrame({'person':label_dict.keys(),'source':[label_dict[person]['Taxable Income'] for person in label_dict.keys()]}),left_on='person_split',right_on='person')
-
-    if debug_sankey:
-        income_totals = income.groupby('person')['value'].sum().reset_index(drop=False)
-        pretax_totals = pretax_grouped.copy()
-        posttax_totals = posttax_cat.groupby('person')['value'].sum().reset_index(drop=False)
-        print(f"[sankey] income_totals=\n{income_totals}")
-        print(f"[sankey] pretax_totals=\n{pretax_totals}")
-        print(f"[sankey] posttax_totals=\n{posttax_totals}")
         
     #
     nodes += list(posttax_cat['source'].unique())
