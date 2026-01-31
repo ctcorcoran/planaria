@@ -475,8 +475,45 @@ class Plan:
             objs = [obj for obj in getattr(self,obj_type) if obj.category not in cats_to_ignore]
 
         if person is not None:
-            people = utils.plotting.make_people_list(self, person) + ['Joint']
-            objs = [obj for obj in objs if obj.person in people]
+            if obj_type == 'expenses':
+                rows = []
+                for obj in objs:
+                    if obj.person == 'Joint':
+                        if person == 'Joint':
+                            value = obj.value[year]
+                            label = obj.name + ' (Joint)'
+                            rows.append({'name':obj.name,'person':'Joint','category':obj.category,'value':value,'label':label})
+                        else:
+                            if hasattr(obj, 'components') and person in obj.components:
+                                value = obj.components[person][year]
+                                label = obj.name + ' (' + self.get_object_from_id(person).name + ')'
+                                rows.append({'name':obj.name,'person':self.get_object_from_id(person).name,'category':obj.category,'value':value,'label':label})
+                    else:
+                        if person == 'Joint' or obj.person == person:
+                            value = obj.value[year]
+                            label = obj.name + ' (' + self.get_object_from_id(obj.person).name + ')'
+                            rows.append({'name':obj.name,'person':self.get_object_from_id(obj.person).name,'category':obj.category,'value':value,'label':label})
+                plot_df = pd.DataFrame(rows)
+            else:
+                people = utils.plotting.make_people_list(self, person) + ['Joint']
+                objs = [obj for obj in objs if obj.person in people]
+                plot_df = pd.DataFrame({'name':[obj.name for obj in objs],
+                                        'person':['Joint' if obj.person == 'Joint' else self.get_object_from_id(obj.person).name for obj in objs],
+                                        'category':[obj.subcategory if obj.obj_type == 'Asset' else obj.category for obj in objs],
+                                        'value':[obj.value[year] for obj in objs],
+                                        'label':[obj.name + ' (Joint)' if obj.person == 'Joint' else obj.name + ' (' + self.get_object_from_id(obj.person).name + ')' for obj in objs]})
+            if plot_df.empty:
+                plot_df = pd.DataFrame({'name':[], 'person':[], 'category':[], 'value':[], 'label':[]})
+            if plot_type == 'pie':
+                fig = px.pie(plot_df,values='value',names='label',color='category',
+                             color_discrete_map=color_dict,hole=0.33)
+                fig.update_traces(textposition='inside', textinfo='label+value')
+                fig.update(layout_showlegend=False)
+            elif plot_type == 'sunburst':
+                fig = px.sunburst(plot_df,values='value',path=['category','label'],color='category',
+                             color_discrete_map=color_dict)
+                fig.update_traces(textinfo="label+percent root")
+            return(fig)
             
         plot_df = pd.DataFrame({'name':[obj.name for obj in objs],
                                 'person':['Joint' if obj.person == 'Joint' else self.get_object_from_id(obj.person).name for obj in objs],

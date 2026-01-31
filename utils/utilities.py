@@ -143,7 +143,7 @@ def expand_contract(series,cal_year,val_pad_front=True,val_pad_back=False,pad_va
     Returns:
         Standardized pandas Series
     """
-    if (isinstance(series,int) or isinstance(series,float)):
+    if isinstance(series,(int,float,np.integer,np.floating)):
         series = pd.Series([series for _ in range(len(cal_year))],index=cal_year)
     elif isinstance(series,pd.Series):
         if len(series) > 0:

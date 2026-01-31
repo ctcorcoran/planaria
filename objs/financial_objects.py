@@ -745,6 +745,8 @@ class LiabObj(FinObj):
             
         # Start with any empty asset, if one is paired, it will be updated in .project()    
         self.asset_value = pd.Series(0,index=self.cal_year)
+        # Backward-compatible alias for legacy usage
+        self.asset_val = self.asset_value
         
         if self.subcategory=='Mortgage':
             self.pmi_rate = attributes['pmi_rate']
@@ -772,7 +774,7 @@ class LiabObj(FinObj):
         pmipay = [0 for i in range(self.term)]
         if self.subcategory == 'Mortgage':
             # Interpolate asset_value - should be an exponential interpolation, but whatever...it doesn't make a huge difference
-            asset_val_interp = list(np.interp(time_interp,self.cal_year,self.asset_val))
+            asset_val_interp = list(np.interp(time_interp,self.cal_year,self.asset_value))
             equity_prop = [1-value[i]/asset_val_interp[i] for i in range(self.term)]
             #pmi_thresh = (1-self.pmi_thresh_pct)*self.principal
             pmi = self.pmi_rate*self.principal/12

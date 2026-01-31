@@ -117,8 +117,14 @@ def add_asset(asset_type,existing,session_state):
     else:
         joint = []
     with st.form("new_asset"):
+        person_options = [person.name for person in st.session_state['plan'].people if person.dependent == False] + joint
+        if asset_type == 'home' and 'Joint' in person_options:
+            default_person_index = person_options.index('Joint')
+        else:
+            default_person_index = 0
         st.selectbox("Person",
-                     options=([person.name for person in st.session_state['plan'].people if person.dependent == False]+joint),
+                     options=person_options,
+                     index=default_person_index,
                      key='person_new')
         if existing == True:
             if asset_type == 'car':
@@ -430,6 +436,8 @@ def generate_asset(asset_id,session_state):
 
             st.text('Down Payment Sources')
             #
+            savings_ids = [asset.id for asset in st.session_state['plan'].assets if asset.subcategory == 'Savings']
+            down_payment_sources = [pair for pair in down_payment_sources if pair[0] in savings_ids]
             dp_df = pd.DataFrame(down_payment_sources,columns=['id','Value/Proportion'])
             dp_df = pd.concat([dp_df,pd.DataFrame([(obj_.id,None) for obj_ in st.session_state['plan'].assets if obj_.subcategory == 'Savings' and obj_.id not in list(dp_df['id'])],
                                                   columns=['id','Value/Proportion'])]).reset_index(drop=True)
@@ -442,7 +450,12 @@ def generate_asset(asset_id,session_state):
                            on_change=update_asset,
                            args=[[asset_id]+paired_ids,'down_payment_sources',session_state],
                            key=f'{asset_id}_down_payment_sources')
-            obj.down_payment_sources = [(down_payment_sources.loc[i,'id'],down_payment_sources.loc[i,'Value/Proportion']) for i in range(len(down_payment_sources))]
+            updated_sources = [(down_payment_sources.loc[i,'id'],down_payment_sources.loc[i,'Value/Proportion']) for i in range(len(down_payment_sources))]
+            updated_sources = [pair for pair in updated_sources if pair[0] in savings_ids]
+            if paired_liab == True:
+                liab_obj.down_payment_sources = updated_sources
+            else:
+                obj.down_payment_sources = updated_sources
             
             # If New - replacement assets/expenses
             st.multiselect('Assets Replaced',
@@ -561,6 +574,7 @@ def update_asset(id_list,attr,session_state):
         st.session_state['plan'].events = [[start_year,x[1],x[2]] if x[2]==asset_id else (x[0],x[1],x[2]) for x in st.session_state['plan'].events]
         
         # Update asset
+        old_start_year = asset_obj.start_year
         asset_obj.value = asset_obj.value[asset_obj.start_year]
         asset_obj.start_year = start_year
     
@@ -576,9 +590,8 @@ def update_asset(id_list,attr,session_state):
         
         # If no liability, asset holds down_payment_sources
         else:
-            down_payment = asset_obj.value[asset_obj.start_year]
+            down_payment = asset_obj.value[start_year]
             down_payment_sources = asset_obj.down_payment_sources
-            old_start_year = asset_obj.start_year
 
         for pair in down_payment_sources:
             st.session_state['plan'].get_object_from_id(pair[0]).deposit(down_payment*pair[1],old_start_year)
@@ -589,6 +602,10 @@ def update_asset(id_list,attr,session_state):
             liab_obj.start_year = start_year
         else:
             asset_obj.start_year = start_year
+
+        # Ensure dependent projections fire when start year changes
+        if any(pair[0] == asset_id for lst in st.session_state['plan'].pairs.values() for pair in lst):
+            asset_obj.dependent_objs = True
     
     elif attr == 'value':
         asset_obj.value = st.session_state[f'{asset_id}_value']
@@ -634,6 +651,7 @@ def update_asset(id_list,attr,session_state):
             old_down_payment_sources = asset_obj.down_payment_sources
             new_down_payment_sources = asset_obj.down_payment_sources
             year = asset_obj.start_year
+        savings_ids = [asset.id for asset in st.session_state['plan'].assets if asset.subcategory == 'Savings']
             
         # First, copy the old down_payment_sources, and update with data_editor 
         editor_state = st.session_state.get(f'{asset_id}_down_payment_sources')
@@ -672,6 +690,7 @@ def update_asset(id_list,attr,session_state):
             st.session_state['plan'].get_object_from_id(pair[0]).withdrawal(down_payment*pair[1],year)
             
         # Finally, set the new attribute
+        new_down_payment_sources = [pair for pair in new_down_payment_sources if pair[0] in savings_ids]
         if paired_liab == True:
             liab_obj.down_payment_sources = new_down_payment_sources
         else:
