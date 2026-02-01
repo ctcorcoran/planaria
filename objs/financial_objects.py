@@ -181,6 +181,15 @@ class FinObj:
                     else:
                         temp_series[pair[1]] += series_val
         for key in temp_series.keys():
+            # Prevent negative expense values for asset-driven contributions
+            if self.obj_type == 'Expense' and key == 'value':
+                for parent_id, pairs in self.paired_attr['series'].items():
+                    for pair in pairs:
+                        if pair[1] == 'value' and pair[0] == 'contribution':
+                            parent_obj = plan.get_object_from_id(parent_id)
+                            if parent_obj is not None and parent_obj.obj_type == 'Asset':
+                                temp_series[key] = temp_series[key].apply(lambda x: max(x,0))
+                                break
             setattr(self,key,temp_series[key])
                     
         # TIME

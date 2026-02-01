@@ -334,12 +334,17 @@ class Plan:
         if amt >= 0:
             print('Drawdown must be negative')
         else:
-            # 
-            amt_remaining = amt
+            # Work with a positive remaining balance
+            amt_remaining = -amt
             counter = 0
+            drawdown_list = self.drawdown_order.get(person, [])
+            if len(drawdown_list) == 0:
+                return(self)
             while amt_remaining > 0:
-                acct_id = self.drawdown_order[person][counter]
-                if acct_id.split('_')[0] == 'Liab':
+                if counter >= len(drawdown_list):
+                    break
+                acct_id = drawdown_list[counter]
+                if acct_id.split('_')[0] == 'Liability':
                     sign = 1
                     keyword = 'charges'
                     # will need to fix below if credit cards are added

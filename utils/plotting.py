@@ -170,8 +170,11 @@ def expense_plots(plan,people,level,after_tax=False):
         level_list = ['category','subcategory']
     elif level == 'name':
         level_list = ['category','subcategory','name']    
+
     
     exp_grouped = df.loc[df['person_split'].isin(people),level_list+['cal_year','value']].groupby(level_list+['cal_year'],as_index=False).sum(numeric_only=None)
+    if level == 'name':
+        exp_grouped['line_key'] = exp_grouped['category'].astype(str) + '|' + exp_grouped['subcategory'].astype(str) + '|' + exp_grouped['name'].astype(str)
     after_tax_exp_grouped = exp_grouped.loc[exp_grouped['category']!='Tax',:] #.groupby(['category','subcategory','owner','cal_year'],as_index=False).sum(numeric_only=None)
     
     col_dict = CASHFLOW_COLORS
@@ -181,7 +184,7 @@ def expense_plots(plan,people,level,after_tax=False):
                       x="cal_year", 
                       y="value", 
                       color='category', 
-                      line_group=level, 
+                      line_group='line_key' if level == 'name' else level, 
                       #title="All Expenses",
                       color_discrete_map=col_dict,
                       template='seaborn')
@@ -190,7 +193,7 @@ def expense_plots(plan,people,level,after_tax=False):
                        x="cal_year",
                        y="value",
                        color='category',
-                       line_group=level,
+                       line_group='line_key' if level == 'name' else level,
                        #title="After Tax Expenses",
                        groupnorm='percent',
                        color_discrete_map=col_dict,

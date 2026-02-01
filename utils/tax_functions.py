@@ -471,20 +471,14 @@ def balance_and_tax(plan):
             obj = plan.get_object_from_id(acct)
             obj.contribution = pd.Series(0,index=obj.cal_year)
             plan = obj.project(plan)
+        # NOTE: This reset clears prior auto-balancing contributions
         
-        # Use only non-savings expenses when determining surplus available for savings
-        # to prevent double-counting contributions. Include pretax savings deductions
-        # (Traditional/HSA) so take-home pay is reduced appropriately.
-        non_savings_categories = ['Necessary','Discretionary','Tax']
+        # Sum all expense components for this person
         expenses_series_list = []
-        pretax_series_list = []
         for exp in plan.expenses:
             if hasattr(exp, 'components') and person in exp.components:
-                if exp.category in non_savings_categories:
-                    expenses_series_list.append(exp.components[person])
-                if exp.tax_keyword in ['Traditional','HSA']:
-                    pretax_series_list.append(exp.components[person])
-        total_expenses = _sum_series(expenses_series_list, plan.cal_year) + _sum_series(pretax_series_list, plan.cal_year)
+                expenses_series_list.append(exp.components[person])
+        total_expenses = _sum_series(expenses_series_list, plan.cal_year)
         # print('Person: ',person)
         # print('Total Expenses: ',total_expenses[2024])
         #print(total_expenses)

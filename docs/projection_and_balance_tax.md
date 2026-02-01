@@ -238,6 +238,11 @@ def balance_and_tax(plan):
                 plan = plan.drawdown(difference[yr], yr, person)
 ```
 
+**Savings accounting note**:
+- Before balancing, contributions on drawdown-eligible savings accounts are reset to zero and re-projected.
+- This ensures any prior auto-balancing contributions are cleared, and linked expense objects are also reset.
+- As a result, the expense totals used to compute `difference` reflect only explicit expenses (including retirement/pension contributions), not stale auto-balancing values from earlier updates.
+
 ### 4. Drawdown Process
 
 When expenses exceed income, the system draws down from savings:
