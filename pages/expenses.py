@@ -102,6 +102,7 @@ def remove_expense(expense_id):
 
 def update_expense(expense_id,obj,attr):
     utils.ui_functions.sidebar_buttons(False)
+    obj = st.session_state['plan'].get_object_from_id(expense_id)
 
     if attr == 'value':
         if (f'{expense_id}_ann_month' in st.session_state) & (st.session_state[f'{expense_id}_ann_month'] == 'Monthly'):
@@ -190,11 +191,11 @@ def generate_expense(expense_id,disp_div):
             st.write(f'Enter values in {obj.start_year} dollars')
             base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
             base_series = base_series.reindex(st.session_state['plan'].cal_year)
-            obj.value = st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
-                                       num_rows='fixed',
-                                       on_change=update_expense,
-                                       args=[expense_id,obj,'value'],
-                                       key=f'{expense_id}_value').set_axis(obj.value.index)
+            st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
+                           num_rows='fixed',
+                           on_change=update_expense,
+                           args=[expense_id,obj,'value'],
+                           key=f'{expense_id}_value')
         
         st.button(f"{BUTTON_DELETE} Delete",
                   on_click=remove_expense,

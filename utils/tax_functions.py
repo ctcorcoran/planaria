@@ -392,6 +392,7 @@ def balance_and_tax(plan):
         return sum(series_list)
     
     plan = plan.standardize_all_series()
+    plan.pairs = utils.utilities.normalize_pairs(plan.pairs)
     #plan = plan.project_all()
     
     # print(plan.aggregate('Expense','Joint'))
@@ -475,9 +476,17 @@ def balance_and_tax(plan):
         
         # Sum all expense components for this person
         expenses_series_list = []
+        expense_debug_rows = []
         for exp in plan.expenses:
             if hasattr(exp, 'components') and person in exp.components:
                 expenses_series_list.append(exp.components[person])
+                expense_debug_rows.append({
+                    'id': exp.id,
+                    'name': exp.name,
+                    'category': exp.category,
+                    'subcategory': exp.subcategory,
+                    'value': exp.components[person]
+                })
         total_expenses = _sum_series(expenses_series_list, plan.cal_year)
         # print('Person: ',person)
         # print('Total Expenses: ',total_expenses[2024])
@@ -486,6 +495,7 @@ def balance_and_tax(plan):
         # print('Total Income: ',total_income[2024])
         difference  = total_income - total_expenses
         # print('Total Difference: ',difference[2024])
+        # Debug prints removed after verification
         
         # Loop over years, reproject savings accts each time (computationally cheap)
         # If 

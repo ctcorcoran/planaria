@@ -140,26 +140,9 @@ def generate_statement(plan,people,year,statement_type='cashflow'):
 def expense_plots(plan,people,level,after_tax=False):
     joint_view = (people == 'Joint')
     if joint_view:
-        people = [person.id for person in plan.people if person.dependent == False] + ['Joint']
-        rows = []
-        for item in plan.expenses:
-            if item.person == 'Joint':
-                temp = pd.DataFrame(
-                    {key:item.__dict__[key] for key in ['id','category','subcategory','name','value']},
-                    index=item.cal_year
-                ).reset_index(drop=False).rename(columns={'index':'cal_year'})
-                temp['person_split'] = 'Joint'
-                rows.append(temp)
-            else:
-                temp = pd.DataFrame(
-                    {key:item.__dict__[key] for key in ['id','person','category','subcategory','name','value']},
-                    index=item.cal_year
-                ).reset_index(drop=False).rename(columns={'index':'cal_year','person':'person_split'})
-                rows.append(temp)
-        if len(rows) == 0:
-            df = pd.DataFrame({'cal_year':plan.cal_year,'person_split':'','category':'','subcategory':'','name':'','value':0})
-        else:
-            df = pd.concat(rows)
+        people = [person.id for person in plan.people if person.dependent == False]
+        # Use components-based dataframe so joint expenses align with per-person balances
+        df = to_dataframe(plan, people, 'expenses')
     else:
         people = make_people_list(plan,people)
         df = to_dataframe(plan, people, 'expenses')

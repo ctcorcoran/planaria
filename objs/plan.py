@@ -133,6 +133,8 @@ class Plan:
     def reorder_object_ids(self):
         """Reorder object IDs for consistency and serialization."""
         replace_dict = {}
+        # Normalize pairs before remapping IDs
+        self.pairs = utils.utilities.normalize_pairs(self.pairs)
         for lst in ['income','expenses','assets','liabilities']:
             def sort_key(obj):
                 value = obj.value

@@ -259,6 +259,7 @@ def remove_income(income_id):
 
 def update_income(income_id,obj,attr):
     utils.ui_functions.sidebar_buttons(False)
+    obj = st.session_state['plan'].get_object_from_id(income_id)
 
     if attr == 'value':
         if (f'{income_id}_ann_month' in st.session_state) & (st.session_state[f'{income_id}_ann_month'] == 'Monthly'):
@@ -322,11 +323,11 @@ def generate_income(income_id,disp_div):
             st.write(f'Enter values in {obj.start_year} dollars')
             base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
             base_series = base_series.reindex(st.session_state['plan'].cal_year)
-            obj.value = st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
-                                       num_rows='fixed',
-                                       on_change=update_income,
-                                       args=[income_id,obj,'value'],
-                                       key=f'{income_id}_value').set_axis(obj.value.index)
+            st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
+                           num_rows='fixed',
+                           on_change=update_income,
+                           args=[income_id,obj,'value'],
+                           key=f'{income_id}_value')
             
             #WHEN TO UPDATE, and KEEP UNINFLATED ENTRY WITH MANUAL
         
@@ -348,8 +349,11 @@ def generate_income(income_id,disp_div):
                         if isinstance(pair, (list, tuple)) and len(pair) > 1:
                             parent_id, child_id = pair[0], pair[1]
                         elif isinstance(pair, dict):
-                            parent_id = pair.get('parent') or pair.get('source')
-                            child_id = pair.get('child') or pair.get('target')
+                            if 'value' in pair and isinstance(pair['value'], (list, tuple)) and len(pair['value']) > 1:
+                                parent_id, child_id = pair['value'][0], pair['value'][1]
+                            else:
+                                parent_id = pair.get('parent') or pair.get('source')
+                                child_id = pair.get('child') or pair.get('target')
                         else:
                             continue
                         if parent_id == obj.id:

@@ -134,42 +134,31 @@ def json_to_plan(json_string):
                 value = pd.Series(value)
                 value.index = pd.to_numeric(value.index)
         setattr(temp_plan, key, value)
-    # Cleanup duplicate pension objects if present
-    temp_plan = _cleanup_pension_duplicates(temp_plan)
+    # Normalize pair structures loaded from JSON
+    if hasattr(temp_plan, 'pairs'):
+        temp_plan.pairs = normalize_pairs(temp_plan.pairs)
     return(temp_plan)
 
-def _cleanup_pension_duplicates(plan):
-    """Remove duplicate pension-related objects (contribution expense + equivalent asset)."""
-    # Identify duplicates by person and name
-    def _dedupe_by_name(objs):
-        seen = set()
-        keep = []
-        remove = []
-        for obj in objs:
-            key = (obj.person, obj.name)
-            if key in seen:
-                remove.append(obj.id)
-            else:
-                seen.add(key)
-                keep.append(obj)
-        return keep, remove
-
-    pension_expenses = [exp for exp in plan.expenses if exp.name.startswith('Pension Contribution')]
-    pension_assets = [asset for asset in plan.assets if asset.name == 'Pension Equivalent']
-
-    kept_expenses, remove_exp_ids = _dedupe_by_name(pension_expenses)
-    kept_assets, remove_asset_ids = _dedupe_by_name(pension_assets)
-
-    if len(remove_exp_ids) == 0 and len(remove_asset_ids) == 0:
-        return plan
-
-    plan.expenses = [exp for exp in plan.expenses if exp.id not in remove_exp_ids]
-    plan.assets = [asset for asset in plan.assets if asset.id not in remove_asset_ids]
-
-    # Remove related pairs
-    removed_ids = set(remove_exp_ids + remove_asset_ids)
-    plan.pairs = {k:[pair for pair in plan.pairs[k] if pair[0] not in removed_ids and pair[1] not in removed_ids] for k in plan.pairs.keys()}
-    return plan
+def normalize_pairs(pairs):
+    """Normalize pair entries to simple [parent, child] lists."""
+    if not isinstance(pairs, dict):
+        return {'series': [], 'time': [], 'share': []}
+    normalized = {}
+    for key in ['series', 'time', 'share']:
+        new_list = []
+        for pair in pairs.get(key, []):
+            if isinstance(pair, (list, tuple)) and len(pair) > 1:
+                new_list.append([pair[0], pair[1]])
+            elif isinstance(pair, dict):
+                if 'value' in pair and isinstance(pair['value'], (list, tuple)) and len(pair['value']) > 1:
+                    new_list.append([pair['value'][0], pair['value'][1]])
+                else:
+                    parent = pair.get('parent') or pair.get('source')
+                    child = pair.get('child') or pair.get('target')
+                    if parent is not None and child is not None:
+                        new_list.append([parent, child])
+        normalized[key] = new_list
+    return normalized
 
 def expand_contract(series,cal_year,val_pad_front=True,val_pad_back=False,pad_vals=[0,0]):
     """
@@ -367,6 +356,8 @@ def get_all_descendants(plan, obj_id):
     """
     descendants = {'series': set(), 'time': set(), 'share': set()}
     
+    # Normalize pairs for safety
+    pairs = normalize_pairs(plan.pairs)
     # Use a queue to process all descendants iteratively
     to_process = [obj_id]
     processed = set()
@@ -379,7 +370,7 @@ def get_all_descendants(plan, obj_id):
         
         # Find all children of current_id in each network
         for network in ['series', 'time', 'share']:
-            for pair in plan.pairs[network]:
+            for pair in pairs[network]:
                 if pair[0] == current_id:  # current_id is parent, pair[1] is child
                     child_id = pair[1]
                     descendants[network].add(child_id)
@@ -401,6 +392,8 @@ def get_all_ancestors(plan, obj_id):
     """
     ancestors = {'series': set(), 'time': set(), 'share': set()}
     
+    # Normalize pairs for safety
+    pairs = normalize_pairs(plan.pairs)
     # Use a queue to process all ancestors iteratively
     to_process = [obj_id]
     processed = set()
@@ -413,7 +406,7 @@ def get_all_ancestors(plan, obj_id):
         
         # Find all parents of current_id in each network
         for network in ['series', 'time', 'share']:
-            for pair in plan.pairs[network]:
+            for pair in pairs[network]:
                 if pair[1] == current_id:  # current_id is child, pair[0] is parent
                     parent_id = pair[0]
                     ancestors[network].add(parent_id)

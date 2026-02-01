@@ -257,8 +257,11 @@ class FinObj:
                         if isinstance(pair, (list, tuple)) and len(pair) > 1:
                             parent_id, child_id = pair[0], pair[1]
                         elif isinstance(pair, dict):
-                            parent_id = pair.get('parent') or pair.get('source')
-                            child_id = pair.get('child') or pair.get('target')
+                            if 'value' in pair and isinstance(pair['value'], (list, tuple)) and len(pair['value']) > 1:
+                                parent_id, child_id = pair['value'][0], pair['value'][1]
+                            else:
+                                parent_id = pair.get('parent') or pair.get('source')
+                                child_id = pair.get('child') or pair.get('target')
                         else:
                             continue
                         if parent_id == self.id:
@@ -491,8 +494,11 @@ class IncomeObj(IncExpObj):
                 if isinstance(pair, (list, tuple)) and len(pair) > 1:
                     parent_id, child_id = pair[0], pair[1]
                 elif isinstance(pair, dict):
-                    parent_id = pair.get('parent') or pair.get('source')
-                    child_id = pair.get('child') or pair.get('target')
+                    if 'value' in pair and isinstance(pair['value'], (list, tuple)) and len(pair['value']) > 1:
+                        parent_id, child_id = pair['value'][0], pair['value'][1]
+                    else:
+                        parent_id = pair.get('parent') or pair.get('source')
+                        child_id = pair.get('child') or pair.get('target')
                 else:
                     continue
                 if parent_id == self.id:
