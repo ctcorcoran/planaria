@@ -272,9 +272,13 @@ class IncExpObj(FinObj):
         if self.fixed == True:
             pass
         else:
-            self.value_input = utils.utilities.expand_contract(self.value_input,self.cal_year)#.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):])
-            self.infl_rate = utils.utilities.expand_contract(self.infl_rate,self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):])
-            base_year = int(self.start_year)
+            start_idx = self.cal_year[self.cal_year==self.start_year].index
+            if len(start_idx) == 0:
+                start_idx = [0]
+            start_idx = start_idx[0]
+            self.value_input = utils.utilities.expand_contract(self.value_input,self.cal_year)
+            self.infl_rate = utils.utilities.expand_contract(self.infl_rate,self.cal_year.loc[start_idx:])
+            base_year = int(self.start_year) if int(self.start_year) in self.cal_year.values else int(self.cal_year.iloc[0])
             cumulative_infl = [
                 1 if yr == base_year else pd.Series(1+self.infl_rate.loc[base_year:yr-1]).product()
                 for yr in self.cal_year
@@ -289,8 +293,12 @@ class IncExpObj(FinObj):
         if self.fixed == True:
             pass
         else:
-            self.infl_rate = utils.utilities.expand_contract(self.infl_rate,self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):])
-            base_year = int(self.start_year)
+            start_idx = self.cal_year[self.cal_year==self.start_year].index
+            if len(start_idx) == 0:
+                start_idx = [0]
+            start_idx = start_idx[0]
+            self.infl_rate = utils.utilities.expand_contract(self.infl_rate,self.cal_year.loc[start_idx:])
+            base_year = int(self.start_year) if int(self.start_year) in self.cal_year.values else int(self.cal_year.iloc[0])
             cumulative_infl = [
                 1 if yr == base_year else pd.Series(1+self.infl_rate.loc[base_year:yr-1]).product()
                 for yr in self.cal_year
@@ -575,18 +583,22 @@ class AssetObj(FinObj):
     
     def update(self):
         """Update asset values using compound growth formula."""
+        start_idx = self.cal_year[self.cal_year==self.start_year].index
+        if len(start_idx) == 0:
+            start_idx = [0]
+        start_idx = start_idx[0]
         for attr in ['growth_rate','value','contribution','secondary_contribution','transaction']:
-            setattr(self,attr,utils.utilities.expand_contract(getattr(self,attr),self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):]))
+            setattr(self,attr,utils.utilities.expand_contract(getattr(self,attr),self.cal_year.loc[start_idx:]))
         
         # Go into the loop if the value is not in the paired attributes
         if 'value' not in [item[1] for sublist in self.paired_attr['series'].values() for item in sublist]:
             temp_val = []
-            for yr in self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):]:
+            for yr in self.cal_year.loc[start_idx:]:
                 if yr == self.start_year:
                     temp_val.append(self.value[yr])
                 else:
                     temp_val.append(temp_val[-1]*(1+self.growth_rate[yr])+self.contribution[yr]+self.secondary_contribution[yr]+self.transaction[yr])
-            self.value = pd.Series(temp_val,index=self.cal_year.loc[(self.cal_year[self.cal_year==self.start_year].index[0]):]).astype(int)
+            self.value = pd.Series(temp_val,index=self.cal_year.loc[start_idx:]).astype(int)
         
         self = self.standardize_timeseries(self.cal_year)
         self.gains = self.value.diff(1).shift(-1)

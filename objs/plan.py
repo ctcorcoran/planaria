@@ -367,6 +367,8 @@ class Plan:
         if len(self.people) == 1:
             return(self)
         else:
+            # Clamp combination year to plan calendar range
+            comb_year = min(max(int(comb_year), int(self.cal_year.iloc[0])), int(self.cal_year.iloc[-1]))
             expenses = [obj for obj in self.expenses if obj.name == obj_name]
             exp_ids = [obj.id for obj in expenses]
             
@@ -391,12 +393,13 @@ class Plan:
                     self = obj.project(self)
                     
                 # Create New Expense
+                infl_rate_series = utils.utilities.expand_contract(self.infl_rate, self.cal_year)
                 new_joint_expense = objs.financial_objects.ExpenseObj('Joint',expenses[0].category,expenses[0].subcategory,obj_name,
                                                expenses[0].tax_keyword,self.cal_year,
                                                0, #combined_val,
                                                expenses[0].fixed,
                                                False, #expenses[0].editable,
-                                               {'props_input':True,'props':1.0,'start_year':comb_year,'infl_rate':self.infl_rate})
+                                               {'props_input':True,'props':1.0,'start_year':comb_year,'infl_rate':infl_rate_series})
                 new_joint_expense.paired_attr['series'] |= {obj.id:[['value_input','value_input',1.0]] for obj in expenses}
                 new_joint_expense.paired_attr['time'] |= {obj.id:[['end_year','start_year',1]] for obj in expenses}
                 
