@@ -40,6 +40,13 @@ def dict_to_object(dictionary):
             value = {key2:pd.Series(val2) for key2, val2 in value.items()}
             for key2 in value.keys():
                 value[key2].index = value[key2].index.astype(int)
+        elif key == 'child_components':
+            if isinstance(value, dict):
+                value = {key2:pd.Series(val2) for key2, val2 in value.items()}
+                for key2 in value.keys():
+                    value[key2].index = value[key2].index.astype(int)
+            elif isinstance(value, pd.DataFrame):
+                value = {col:value[col] for col in value.columns}
         elif key == 'child_cost_df' and value is not None:
             # Handle DataFrame deserialization for Person objects
             value = pd.DataFrame(value)

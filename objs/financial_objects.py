@@ -115,7 +115,13 @@ class FinObj:
         # First, we have to check if the object is a child expense object and recompute
         # its value based on the child_components, in case they have changed
         if "child_components" in self.__dict__.keys():
-            self.value_input = sum([x for x in self.child_components.values()])
+            if isinstance(self.child_components, pd.DataFrame):
+                self.child_components = {col:self.child_components[col] for col in self.child_components.columns}
+            components = [x for x in self.child_components.values()] if isinstance(self.child_components, dict) else []
+            if len(components) > 0:
+                self.value_input = pd.concat(components, axis=1).sum(axis=1)
+            else:
+                self.value_input = pd.Series(0, index=self.cal_year)
 
         # Next, for each of the three networks, pull any paired attributes
         # SERIES
