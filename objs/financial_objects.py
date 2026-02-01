@@ -249,7 +249,21 @@ class FinObj:
              # Project all child objects dependent on current object, and pass init_id 
              # to prevent a loop
             if self.dependent_objs == True:
-                for child_id in [pair[1] for lst in plan.pairs.values() for pair in lst if pair[0]==self.id]:
+                child_ids = []
+                for lst in plan.pairs.values():
+                    if not isinstance(lst, (list, tuple)):
+                        continue
+                    for pair in lst:
+                        if isinstance(pair, (list, tuple)) and len(pair) > 1:
+                            parent_id, child_id = pair[0], pair[1]
+                        elif isinstance(pair, dict):
+                            parent_id = pair.get('parent') or pair.get('source')
+                            child_id = pair.get('child') or pair.get('target')
+                        else:
+                            continue
+                        if parent_id == self.id:
+                            child_ids.append(child_id)
+                for child_id in child_ids:
                     child_obj = plan.get_object_from_id(child_id)
                     if child_obj is None:
                         continue
@@ -471,9 +485,18 @@ class IncomeObj(IncExpObj):
         
         # Find the pension contribution expense
         for pair_list in plan.pairs.values():
+            if not isinstance(pair_list, (list, tuple)):
+                continue
             for pair in pair_list:
-                if pair[0] == self.id:
-                    child_obj = plan.get_object_from_id(pair[1])
+                if isinstance(pair, (list, tuple)) and len(pair) > 1:
+                    parent_id, child_id = pair[0], pair[1]
+                elif isinstance(pair, dict):
+                    parent_id = pair.get('parent') or pair.get('source')
+                    child_id = pair.get('child') or pair.get('target')
+                else:
+                    continue
+                if parent_id == self.id:
+                    child_obj = plan.get_object_from_id(child_id)
                     if (child_obj is not None and 
                         child_obj.obj_type == 'Expense' and 
                         child_obj.name.startswith('Pension Contribution')):

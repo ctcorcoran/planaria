@@ -148,13 +148,34 @@ class Plan:
         for obj in self.income+self.expenses+self.assets+self.liabilities:
             # Update ID, paired attributes, and downpayment (if relevant)
             obj.id = replace_dict[obj.id]
-            obj.paired_attr = {key_:{replace_dict[key]:val for key, val in obj.paired_attr[key_].items()} for key_ in ['series','time','share']}
+            obj.paired_attr = {
+                key_: {replace_dict.get(key, key): val for key, val in obj.paired_attr[key_].items()}
+                for key_ in ['series', 'time', 'share']
+            }
             if 'down_payment_sources' in self.__dict__.keys():
                 self.down_payment_sources['id'] = self.down_payment_sources['id'].apply(lambda x: replace_dict[x]) 
             
         # Change external lists: pairs, events, drawdown order   
-        self.pairs = {key:[[replace_dict[pair[0]],replace_dict[pair[1]]] for pair in self.pairs[key]] for key in ['series','time','share']}
-        self.drawdown_order = {key:[replace_dict[obj_id] for obj_id in val] for key, val in self.drawdown_order.items()}
+        updated_pairs = {}
+        for key in ['series', 'time', 'share']:
+            new_list = []
+            for pair in self.pairs.get(key, []):
+                if isinstance(pair, (list, tuple)) and len(pair) > 1:
+                    new_list.append([replace_dict.get(pair[0], pair[0]), replace_dict.get(pair[1], pair[1])])
+                elif isinstance(pair, dict):
+                    new_pair = copy.deepcopy(pair)
+                    if 'parent' in new_pair:
+                        new_pair['parent'] = replace_dict.get(new_pair['parent'], new_pair['parent'])
+                    if 'source' in new_pair:
+                        new_pair['source'] = replace_dict.get(new_pair['source'], new_pair['source'])
+                    if 'child' in new_pair:
+                        new_pair['child'] = replace_dict.get(new_pair['child'], new_pair['child'])
+                    if 'target' in new_pair:
+                        new_pair['target'] = replace_dict.get(new_pair['target'], new_pair['target'])
+                    new_list.append(new_pair)
+            updated_pairs[key] = new_list
+        self.pairs = updated_pairs
+        self.drawdown_order = {key:[replace_dict.get(obj_id, obj_id) for obj_id in val] for key, val in self.drawdown_order.items()}
         updated_events = []
         for year, label, payload in self.events:
             # Update payload if it's an object ID or a dict containing IDs

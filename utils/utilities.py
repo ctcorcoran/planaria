@@ -56,7 +56,7 @@ def dict_to_object(dictionary):
                 if key == 'paired_attr': #set(value.keys()) == set(['series','time','share']):
                     value = {key:{key2:[[x[0],x[1],pd.Series(x[2]).set_axis(pd.Series(x[2]).index.astype(int))] if isinstance(x[2],dict) else [x[0],x[1],x[2]] for x in val2] for key2, val2 in value[key].items()} for key in ['series','time','share']}
                 elif key == 'pension_params':
-                    continue    
+                    pass    
                 else:
                     if isinstance(list(value.values())[0],list):
                         pass
@@ -134,7 +134,42 @@ def json_to_plan(json_string):
                 value = pd.Series(value)
                 value.index = pd.to_numeric(value.index)
         setattr(temp_plan, key, value)
+    # Cleanup duplicate pension objects if present
+    temp_plan = _cleanup_pension_duplicates(temp_plan)
     return(temp_plan)
+
+def _cleanup_pension_duplicates(plan):
+    """Remove duplicate pension-related objects (contribution expense + equivalent asset)."""
+    # Identify duplicates by person and name
+    def _dedupe_by_name(objs):
+        seen = set()
+        keep = []
+        remove = []
+        for obj in objs:
+            key = (obj.person, obj.name)
+            if key in seen:
+                remove.append(obj.id)
+            else:
+                seen.add(key)
+                keep.append(obj)
+        return keep, remove
+
+    pension_expenses = [exp for exp in plan.expenses if exp.name.startswith('Pension Contribution')]
+    pension_assets = [asset for asset in plan.assets if asset.name == 'Pension Equivalent']
+
+    kept_expenses, remove_exp_ids = _dedupe_by_name(pension_expenses)
+    kept_assets, remove_asset_ids = _dedupe_by_name(pension_assets)
+
+    if len(remove_exp_ids) == 0 and len(remove_asset_ids) == 0:
+        return plan
+
+    plan.expenses = [exp for exp in plan.expenses if exp.id not in remove_exp_ids]
+    plan.assets = [asset for asset in plan.assets if asset.id not in remove_asset_ids]
+
+    # Remove related pairs
+    removed_ids = set(remove_exp_ids + remove_asset_ids)
+    plan.pairs = {k:[pair for pair in plan.pairs[k] if pair[0] not in removed_ids and pair[1] not in removed_ids] for k in plan.pairs.keys()}
+    return plan
 
 def expand_contract(series,cal_year,val_pad_front=True,val_pad_back=False,pad_vals=[0,0]):
     """

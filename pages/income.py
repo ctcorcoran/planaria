@@ -338,6 +338,39 @@ def generate_income(income_id,disp_div):
             st.divider()
             st.write("**Pension Configuration**")
             
+            # Recover pension_params if child pension objects exist
+            if not hasattr(obj, 'pension_params'):
+                child_ids = []
+                for pair_list in st.session_state['plan'].pairs.values():
+                    if not isinstance(pair_list, (list, tuple)):
+                        continue
+                    for pair in pair_list:
+                        if isinstance(pair, (list, tuple)) and len(pair) > 1:
+                            parent_id, child_id = pair[0], pair[1]
+                        elif isinstance(pair, dict):
+                            parent_id = pair.get('parent') or pair.get('source')
+                            child_id = pair.get('child') or pair.get('target')
+                        else:
+                            continue
+                        if parent_id == obj.id:
+                            child_ids.append(child_id)
+                pension_children = []
+                for child_id in child_ids:
+                    child_obj = st.session_state['plan'].get_object_from_id(child_id)
+                    if child_obj is None:
+                        continue
+                    if (child_obj.obj_type == 'Expense' and child_obj.name.startswith('Pension Contribution')) or \
+                       (child_obj.obj_type == 'Asset' and child_obj.name == 'Pension Equivalent'):
+                        pension_children.append(child_id)
+                if len(pension_children) > 0:
+                    obj.pension_params = {
+                        'service_start_year': st.session_state['plan'].start_year,
+                        'vesting_years': 5,
+                        'final_avg_years': 3,
+                        'retirement_age': 65,
+                    }
+                    obj.dependent_objs = True
+            
             if hasattr(obj, 'pension_params'):
                 # Show pension parameters and allow editing
                 st.write("✅ Pension Enabled")
