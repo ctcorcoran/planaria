@@ -260,6 +260,7 @@ def remove_income(income_id):
 def update_income(income_id,obj,attr):
     utils.ui_functions.sidebar_buttons(False)
     obj = st.session_state['plan'].get_object_from_id(income_id)
+    st.session_state[f'{income_id}_expander_open'] = True
 
     if attr == 'value':
         if (f'{income_id}_ann_month' in st.session_state) & (st.session_state[f'{income_id}_ann_month'] == 'Monthly'):
@@ -269,8 +270,9 @@ def update_income(income_id,obj,attr):
         raw_value = st.session_state.get(f"{income_id}_"+attr)
         base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
         base_series = base_series.reindex(st.session_state['plan'].cal_year)
+        base_series_display = base_series / multi
         value_series = utils.utilities.data_editor_to_series(raw_value,
-                                                             base_series,
+                                                             base_series_display,
                                                              list(st.session_state['plan'].cal_year))
         if obj.fixed:
             setattr(obj, attr, multi * value_series)
@@ -294,7 +296,13 @@ def generate_income(income_id,disp_div):
         person_name = 'Joint'
     else:
         person_name = st.session_state['plan'].get_object_from_id(obj.person).name
-    with st.expander(label=(obj.name+' ('+person_name +') - '+str(int(obj.value[obj.start_year]/disp_div)))):
+    expander_key = f'{income_id}_expander_open'
+    if expander_key not in st.session_state:
+        st.session_state[expander_key] = False
+    with st.expander(
+        label=(obj.name+' ('+person_name +') - '+str(int(obj.value[obj.start_year]/disp_div))),
+        expanded=st.session_state.get(expander_key, False)
+    ):
         # Allow for "Joint" person if there are two (or more) non-dependents
         # if len([person for person in st.session_state['plan'].people if person.dependent == False]) > 1:
         #     joint = ['Joint']
@@ -305,9 +313,15 @@ def generate_income(income_id,disp_div):
         #
         col1, col2 = st.columns(2)
         with col1:
+            val_entry_key = f'{income_id}_val_entry'
+            if val_entry_key not in st.session_state:
+                base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
+                base_series = base_series.reindex(st.session_state['plan'].cal_year).fillna(0)
+                inferred = 'Auto' if base_series.round(6).nunique(dropna=False) <= 1 else 'Manual'
+                st.session_state[val_entry_key] = inferred
             st.selectbox(label='Value Entry',
                          options=['Auto','Manual']
-                         ,key=f'{income_id}_val_entry')
+                         ,key=val_entry_key)
         with col2:
             st.radio(label='AnnMonth',
                      options=['Annual','Monthly'],
@@ -323,7 +337,8 @@ def generate_income(income_id,disp_div):
             st.write(f'Enter values in {obj.start_year} dollars')
             base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
             base_series = base_series.reindex(st.session_state['plan'].cal_year)
-            st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
+            base_series_display = base_series / multi
+            st.data_editor(base_series_display.set_axis(base_series.index.astype(str)),
                            num_rows='fixed',
                            on_change=update_income,
                            args=[income_id,obj,'value'],
