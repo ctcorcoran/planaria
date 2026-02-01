@@ -1,5 +1,7 @@
 ### STREAMLIT OBJECT GENERATORS
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 import toml
 import os
 import re
@@ -67,6 +69,22 @@ def setup_page():
     # Load and inject custom CSS
     with open('assets/style.css') as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    # Widen dialog popups (e.g., Object Viewer)
+    st.markdown(
+        """
+        <style>
+        [data-testid="stDialog"] > div {
+            max-width: 95vw !important;
+            width: 95vw !important;
+        }
+        .stModal > div {
+            max-width: 95vw !important;
+            width: 95vw !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     
 
 # Get defaults from config
@@ -100,6 +118,75 @@ def make_sidebar():
                 st.page_link('pages/ratios.py',label=f'{SIDEBAR_RATIOS} Ratio Analysis')
             st.button(f"{BUTTON_UPDATE} Update Plan",on_click=utils.ui_functions.update_plan,use_container_width=True,disabled=st.session_state['plan_updated'])
             st.button(f"{BUTTON_SAVE} Save Plan",on_click=utils.ui_functions.save_plan,use_container_width=True,disabled=st.session_state['plan_saved'])
+            st.button("Object Viewer", on_click=utils.ui_functions.open_object_viewer, use_container_width=False)
+
+@st.dialog('Object Viewer')
+def open_object_viewer():
+    """Diagnostic dialog to inspect object series and attributes."""
+    if st.session_state.get('plan', None) is None:
+        st.info("No plan loaded.")
+        return
+    plan = st.session_state['plan']
+    obj_list = plan.people + plan.income + plan.expenses + plan.assets + plan.liabilities
+    if len(obj_list) == 0:
+        st.info("No objects available.")
+        return
+    label_map = {}
+    options = []
+    for obj in obj_list:
+        if obj.obj_type == 'Person':
+            label = f"Person | {obj.name}"
+        else:
+            if obj.person == 'Joint':
+                person_name = 'Joint'
+            else:
+                person = plan.get_object_from_id(obj.person)
+                person_name = person.name if person is not None else obj.person
+            label = f"{obj.obj_type} | {obj.name} | {person_name}"
+        label_map[obj.id] = label
+        options.append(obj.id)
+    selected_id = st.selectbox("Select Object", options=options, format_func=lambda x: label_map.get(x, x))
+    obj = plan.get_object_from_id(selected_id)
+    if obj is None:
+        st.error("Object not found.")
+        return
+    series_attrs = {k:v for k,v in obj.__dict__.items() if isinstance(v,pd.Series) and k != 'cal_year'}
+    attr_rows = []
+    for key, value in obj.__dict__.items():
+        if key.startswith('_') or key == 'cal_year':
+            continue
+        if isinstance(value,pd.Series):
+            continue
+        if isinstance(value,pd.DataFrame):
+            display_val = f"DataFrame ({value.shape[0]}x{value.shape[1]})"
+        elif isinstance(value,dict):
+            display_val = value
+        elif isinstance(value,(list,tuple,set)):
+            display_val = list(value)
+        else:
+            display_val = value
+        attr_rows.append({'Attribute': key, 'Value': display_val})
+    attr_df = pd.DataFrame(attr_rows)
+
+    if len(series_attrs) > 0:
+        series_df = pd.DataFrame({k:v.reindex(obj.cal_year) for k,v in series_attrs.items()}, index=obj.cal_year)
+        col1, col2 = st.columns([0.65, 0.35])
+        with col1:
+            st.write("Time Series Plot")
+            plot_cols = st.multiselect("Series to Plot", options=list(series_df.columns), default=list(series_df.columns)[:1], key=f"{obj.id}_series_plot")
+            if len(plot_cols) > 0:
+                plot_df = series_df[plot_cols].reset_index(drop=False).rename(columns={'index':'cal_year'})
+                fig = px.line(plot_df, x='cal_year', y=plot_cols)
+                st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            st.write("Attributes")
+            st.dataframe(attr_df, use_container_width=True, hide_index=True)
+        with st.expander("Time Series Table"):
+            st.dataframe(series_df, use_container_width=True)
+    else:
+        st.info("No time series found on this object.")
+        st.write("Attributes")
+        st.dataframe(attr_df, use_container_width=True, hide_index=True)
 
 def sidebar_buttons(logical):
     """Enable/disable sidebar buttons based on plan state."""
