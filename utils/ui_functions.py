@@ -167,6 +167,8 @@ def open_object_viewer():
             display_val = value
         attr_rows.append({'Attribute': key, 'Value': display_val})
     attr_df = pd.DataFrame(attr_rows)
+    if 'Value' in attr_df.columns:
+        attr_df['Value'] = attr_df['Value'].apply(lambda x: x if isinstance(x,(int,float,str,bool)) or x is None else str(x))
 
     if len(series_attrs) > 0:
         series_df = pd.DataFrame({k:v.reindex(obj.cal_year) for k,v in series_attrs.items()}, index=obj.cal_year)
