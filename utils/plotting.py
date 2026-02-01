@@ -395,11 +395,12 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     #
     cat_conversion = {key:i for key, i in zip(nodes,list(range(len(nodes))))}
     links = pd.concat([income[['source','target','value']],
-                       # employer_match_[['source','target','value']],
-                       pretax_grouped[['source','target','value']],
-                       posttax_cat[['source','target','value']]]).reset_index(drop=True)
+                      # employer_match_[['source','target','value']],
+                      pretax_grouped[['source','target','value']],
+                      posttax_cat[['source','target','value']]]).reset_index(drop=True)
     
-    links = links.replace({'source':cat_conversion,'target':cat_conversion}).infer_objects(copy=False)
+    links['source'] = links['source'].map(lambda x: cat_conversion.get(x, x))
+    links['target'] = links['target'].map(lambda x: cat_conversion.get(x, x))
     
     # Subcategories
     posttax_subcat = exp.loc[:,['person_split','category','subcategory','value']].groupby(['person_split','category','subcategory']).sum().reset_index(drop=False).rename(columns={'category':'source','subcategory':'target'})
@@ -411,9 +412,10 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     #
     subcat_conversion = {key:(i+len(cat_conversion)) for key,i in zip(subcat_pairs_node,list(range(len(subcat_pairs_node))))}
     links = pd.concat([links,
-                       posttax_subcat[['source','target','value']]]).reset_index(drop=True)
+                      posttax_subcat[['source','target','value']]]).reset_index(drop=True)
     
-    links = links.replace({'source':cat_conversion,'target':subcat_conversion}).infer_objects(copy=False)
+    links['source'] = links['source'].map(lambda x: cat_conversion.get(x, x))
+    links['target'] = links['target'].map(lambda x: subcat_conversion.get(x, x))
     
     # Names
     posttax_name = exp.loc[:,['person_split','subcategory','name','value']].groupby(['person_split','subcategory','name']).sum().reset_index(drop=False).rename(columns={'subcategory':'source','name':'target'})
@@ -425,10 +427,11 @@ def cashflow_sankey(plan,people,year,comb_all_exp=False,normalize=False):
     #
     name_conversion = {key:(i+len(subcat_conversion)+len(cat_conversion)) for key,i in zip(name_pairs_node,list(range(len(name_pairs_node))))}                   
     links = pd.concat([links,
-                       posttax_name[['source','target','value']]
-                       ]).reset_index(drop=True)
+                      posttax_name[['source','target','value']]
+                      ]).reset_index(drop=True)
     
-    links = links.replace({'source':subcat_conversion,'target':name_conversion}).infer_objects(copy=False)
+    links['source'] = links['source'].map(lambda x: subcat_conversion.get(x, x))
+    links['target'] = links['target'].map(lambda x: name_conversion.get(x, x))
     
     # Colors
     node_color = [CASHFLOW_COLORS[cat] for cat in node_color]
