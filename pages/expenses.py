@@ -109,18 +109,11 @@ def update_expense(expense_id,obj,attr):
         else:
             multi = 1
         raw_value = st.session_state.get(f"{expense_id}_"+attr)
-        if isinstance(raw_value, pd.Series):
-            value_series = raw_value.copy()
-            value_series.index = value_series.index.astype(int)
-        elif isinstance(raw_value, pd.DataFrame):
-            if raw_value.shape[1] == 1:
-                value_series = raw_value.iloc[:, 0]
-            else:
-                value_series = pd.Series(raw_value.squeeze())
-            value_series.index = value_series.index.astype(int)
-        else:
-            value_series = pd.Series([raw_value for _ in st.session_state['plan'].cal_year],
-                                     index=st.session_state['plan'].cal_year)
+        base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
+        base_series = base_series.reindex(st.session_state['plan'].cal_year)
+        value_series = utils.utilities.data_editor_to_series(raw_value,
+                                                             base_series,
+                                                             list(st.session_state['plan'].cal_year))
         if obj.fixed:
             setattr(obj, attr, multi * value_series)
         else:
@@ -195,7 +188,9 @@ def generate_expense(expense_id,disp_div):
                             key=f'{expense_id}_value')
         else:
             st.write(f'Enter values in {obj.start_year} dollars')
-            obj.value = st.data_editor(obj.deflate().value.set_axis(obj.value.index.astype(str))/multi,
+            base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
+            base_series = base_series.reindex(st.session_state['plan'].cal_year)
+            obj.value = st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
                                        num_rows='fixed',
                                        on_change=update_expense,
                                        args=[expense_id,obj,'value'],
@@ -248,22 +243,26 @@ with col1:
     
     # Loop over each category 
 
+    plan_year = st.session_state['plan'].start_year
     for cat in ['Necessary','Discretionary','Savings']:
         # Get objects that have a nonzero value for the plan start year
-        temp_obj_list = [obj for obj in st.session_state['plan'].expenses if obj.category == cat and obj.value[st.session_state['plan'].start_year]>0 and not obj.future_event]
+        temp_obj_list = [obj for obj in st.session_state['plan'].expenses
+                         if obj.category == cat
+                         and obj.value.get(plan_year, 0) > 0
+                         and not obj.future_event]
         if len(temp_obj_list) > 0:
             st.subheader(cat)
             # Sort by value in the plan start year
-            for obj in sorted(temp_obj_list,key = lambda x: x.value[st.session_state['plan'].start_year], reverse=True): #x.value[x.start_year], reverse=True):    
+            for obj in sorted(temp_obj_list,key = lambda x: x.value.get(plan_year, 0), reverse=True):
                 obj = st.session_state['plan'].get_object_from_id(obj.id)
                 if obj.editable == True:
                     obj = generate_expense(obj.id,disp_div)
                 else:
-                    if obj.value[obj.start_year] > 0:
+                    if obj.value.get(plan_year, 0) > 0:
                         obj = generate_static_expense(obj.id,disp_div)    
          
 with col2:
-    st.write('Total Expenses (',st.session_state['plan'].start_year,'): ',sum([obj.value[obj.start_year] for obj in st.session_state['plan'].expenses if not obj.future_event]))
+    st.write('Total Expenses (',plan_year,'): ',sum([obj.value.get(plan_year, 0) for obj in st.session_state['plan'].expenses if not obj.future_event]))
     st.plotly_chart(st.session_state['plan'].pie_chart('expenses',st.session_state['plan'].start_year,'sunburst',cats_to_ignore=['Tax']))
 
 # Display Value toggle at bottom

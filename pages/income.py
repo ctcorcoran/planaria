@@ -266,18 +266,11 @@ def update_income(income_id,obj,attr):
         else:
             multi = 1
         raw_value = st.session_state.get(f"{income_id}_"+attr)
-        if isinstance(raw_value, pd.Series):
-            value_series = raw_value.copy()
-            value_series.index = value_series.index.astype(int)
-        elif isinstance(raw_value, pd.DataFrame):
-            if raw_value.shape[1] == 1:
-                value_series = raw_value.iloc[:, 0]
-            else:
-                value_series = pd.Series(raw_value.squeeze())
-            value_series.index = value_series.index.astype(int)
-        else:
-            value_series = pd.Series([raw_value for _ in st.session_state['plan'].cal_year],
-                                     index=st.session_state['plan'].cal_year)
+        base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
+        base_series = base_series.reindex(st.session_state['plan'].cal_year)
+        value_series = utils.utilities.data_editor_to_series(raw_value,
+                                                             base_series,
+                                                             list(st.session_state['plan'].cal_year))
         if obj.fixed:
             setattr(obj, attr, multi * value_series)
         else:
@@ -327,7 +320,9 @@ def generate_income(income_id,disp_div):
             st.number_input("Value",min_value=0,max_value=int(1e12),value=int(obj.value[obj.start_year]/multi),step=1,on_change=update_income,args=[income_id,obj,'value'],key=f'{income_id}_value')
         else:
             st.write(f'Enter values in {obj.start_year} dollars')
-            obj.value = st.data_editor(obj.deflate().value.set_axis(obj.value.index.astype(str))/multi,
+            base_series = obj.value_input if hasattr(obj, 'value_input') else obj.deflate().value
+            base_series = base_series.reindex(st.session_state['plan'].cal_year)
+            obj.value = st.data_editor(base_series.set_axis(base_series.index.astype(str))/multi,
                                        num_rows='fixed',
                                        on_change=update_income,
                                        args=[income_id,obj,'value'],

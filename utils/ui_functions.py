@@ -258,10 +258,14 @@ def update_plan():
                         asset = asset.withdrawal(amt, year)
                         st.session_state['plan'] = asset.project(st.session_state['plan'])
     # Apply grouped Combine Expenses events so taxes/analytics reflect combined state
-    for ev in st.session_state['plan'].events:
+    for i, ev in enumerate(st.session_state['plan'].events):
         if ev[1] == 'Combine Expenses':
             names = ev[2].get('names', [])
-            year = ev[0]
+            year = int(ev[0])
+            min_year = int(st.session_state['plan'].start_year)
+            max_year = int(st.session_state['plan'].start_year + st.session_state['plan'].n_years)
+            year = min(max(year, min_year), max_year)
+            st.session_state['plan'].events[i][0] = year
             st.session_state['plan'] = st.session_state['plan'].combine_expenses(names, year)
     # Then compute balance and taxes
     st.session_state['plan'] = st.session_state['plan'].balance_and_tax()

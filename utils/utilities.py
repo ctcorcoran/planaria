@@ -193,6 +193,42 @@ def expand_contract(series,cal_year,val_pad_front=True,val_pad_back=False,pad_va
             series = pd.Series(0,index=cal_year)
     return(series)
 
+def data_editor_to_series(raw_value, base_series, index_labels):
+    """
+    Convert Streamlit data_editor output to a Series aligned to index_labels.
+    base_series is the starting Series used for manual edits.
+    """
+    if isinstance(raw_value, pd.Series):
+        value_series = raw_value.copy()
+        value_series.index = value_series.index.astype(int)
+        return value_series
+    if isinstance(raw_value, pd.DataFrame):
+        if raw_value.shape[1] == 1:
+            value_series = raw_value.iloc[:, 0]
+        else:
+            value_series = pd.Series(raw_value.squeeze())
+        value_series.index = value_series.index.astype(int)
+        return value_series
+    if isinstance(raw_value, dict):
+        value_series = pd.Series(base_series, index=index_labels).copy()
+        if 'data' in raw_value:
+            df = pd.DataFrame(raw_value['data'])
+            if df.shape[1] == 1:
+                value_series = df.iloc[:, 0]
+            else:
+                value_series = pd.Series(df.squeeze())
+            value_series.index = index_labels
+            return value_series
+        if 'edited_rows' in raw_value:
+            for row_idx, row in raw_value['edited_rows'].items():
+                if len(row) == 0:
+                    continue
+                new_val = list(row.values())[0]
+                if int(row_idx) < len(index_labels):
+                    value_series.iloc[int(row_idx)] = new_val
+            return value_series
+    return pd.Series([raw_value for _ in index_labels], index=index_labels)
+
 # I think we still need an "inflate amount" for tax purposes
 
 def inflate_amount(value,inflation_rate):
