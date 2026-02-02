@@ -181,20 +181,21 @@ def expense_plots(plan,people,level,after_tax=False):
                        groupnorm='percent',
                        color_discrete_map=col_dict,
                        template='seaborn')
-    # Add income overlay for context
-    income_people = [person.id for person in plan.people if person.dependent == False] if joint_view else people
-    income_df = to_dataframe(plan, income_people, 'income')
-    income_df = income_df.loc[income_df['subcategory']!='Employer Match',:]
-    income_series = income_df.loc[income_df['person_split'].isin(income_people),['cal_year','value']].groupby('cal_year').sum(numeric_only=True)['value']
-    fig.add_traces(go.Scatter(x=income_series.index,
-                              y=income_series.values,
-                              name='Income',
-                              line=dict(color='#222222', dash='dash'),
-                              mode='lines'))
+    # Add income overlay for context unless normalized after-tax view
+    if after_tax == False:
+        income_people = [person.id for person in plan.people if person.dependent == False] if joint_view else people
+        income_df = to_dataframe(plan, income_people, 'income')
+        income_df = income_df.loc[income_df['subcategory']!='Employer Match',:]
+        income_series = income_df.loc[income_df['person_split'].isin(income_people),['cal_year','value']].groupby('cal_year').sum(numeric_only=True)['value']
+        fig.add_traces(go.Scatter(x=income_series.index,
+                                  y=income_series.values,
+                                  name='Income',
+                                  line=dict(color='#222222', dash='dash'),
+                                  mode='lines'))
     return({'df':exp_grouped,'fig':fig})
 
 
-def asset_plots(plan,people,level,net_worth_formula=2):
+def asset_plots(plan,people,level,net_worth_formula=2,include_pension_equivalent=False):
     people = make_people_list(plan,people)
     
     if level == 'category':
@@ -206,6 +207,10 @@ def asset_plots(plan,people,level,net_worth_formula=2):
         
     #
     asset_df = to_dataframe(plan,people,'assets')
+    if include_pension_equivalent == False:
+        pension_ids = [obj.id for obj in plan.assets if getattr(obj, 'name', None) == 'Pension Equivalent']
+        if len(pension_ids) > 0:
+            asset_df = asset_df.loc[~asset_df['id'].isin(pension_ids),:]
     liab_df = to_dataframe(plan,people,'liabilities')
     liab_df['value'] = -liab_df['value']
     total_df = pd.concat([asset_df,liab_df])

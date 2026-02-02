@@ -51,6 +51,10 @@ if 'retirement_level' not in st.session_state:
     st.session_state['retirement_level'] = 'subcategory'
 if 'net_worth_radio' not in st.session_state:
     st.session_state['net_worth_radio'] = 2
+if 'net_worth_include_pension' not in st.session_state:
+    st.session_state['net_worth_include_pension'] = False
+if 'retirement_include_pension' not in st.session_state:
+    st.session_state['retirement_include_pension'] = False
 
 # Sidebar
 utils.ui_functions.make_sidebar()
@@ -104,10 +108,13 @@ with net_worth_tab:
                  options=[1,2],
                  format_func=format_radio,
                  key='net_worth_radio')
+        st.checkbox('Include Pension Equivalent',
+                    key='net_worth_include_pension')
     
     asset_plots_result = st.session_state['plan'].asset_plots(st.session_state['net_worth_display_person'],
                                                            st.session_state['net_worth_level'],
-                                                           net_worth_formula=st.session_state['net_worth_radio'])
+                                                           net_worth_formula=st.session_state['net_worth_radio'],
+                                                           include_pension_equivalent=st.session_state['net_worth_include_pension'])
     
     st.plotly_chart(asset_plots_result['fig1'],
                     theme=None)
@@ -124,9 +131,12 @@ with retirement_tab:
                      key='retirement_display_person')
     with col2:
         st.selectbox('Display Aggregation Level',['category','subcategory','name'],key='retirement_level')
+        st.checkbox('Include Pension Equivalent',
+                    key='retirement_include_pension')
     
     retirement_plots_result = st.session_state['plan'].asset_plots(st.session_state['retirement_display_person'],
-                                                           st.session_state['retirement_level'])
+                                                           st.session_state['retirement_level'],
+                                                           include_pension_equivalent=st.session_state['retirement_include_pension'])
     
     st.plotly_chart(retirement_plots_result['fig2'],
                     theme=None)

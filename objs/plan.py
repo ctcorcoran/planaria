@@ -565,8 +565,8 @@ class Plan:
     def expense_plots(self,person,level,after_tax=False):
         return(utils.plotting.expense_plots(self,person,level,after_tax))
     
-    def asset_plots(self,person,level,net_worth_formula=2):
-        return(utils.plotting.asset_plots(self,person,level,net_worth_formula))
+    def asset_plots(self,person,level,net_worth_formula=2,include_pension_equivalent=False):
+        return(utils.plotting.asset_plots(self,person,level,net_worth_formula,include_pension_equivalent))
     
     def cashflow_sankey(self,person,year,comb_all_exp=False,normalize=False):
         return(utils.plotting.cashflow_sankey(self,person,year,comb_all_exp,normalize))
