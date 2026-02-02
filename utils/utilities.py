@@ -222,17 +222,26 @@ def data_editor_to_series(raw_value, base_series, index_labels):
     Convert Streamlit data_editor output to a Series aligned to index_labels.
     base_series is the starting Series used for manual edits.
     """
+    def sanitize_series(value_series):
+        base = pd.Series(base_series, index=index_labels)
+        value_series = pd.Series(value_series, index=index_labels)
+        value_series = pd.to_numeric(value_series, errors='coerce')
+        value_series = value_series.replace([np.inf, -np.inf], np.nan)
+        value_series = value_series.fillna(base)
+        value_series = value_series.fillna(0)
+        return value_series
+
     if isinstance(raw_value, pd.Series):
         value_series = raw_value.copy()
         value_series.index = value_series.index.astype(int)
-        return value_series
+        return sanitize_series(value_series)
     if isinstance(raw_value, pd.DataFrame):
         if raw_value.shape[1] == 1:
             value_series = raw_value.iloc[:, 0]
         else:
             value_series = pd.Series(raw_value.squeeze())
         value_series.index = value_series.index.astype(int)
-        return value_series
+        return sanitize_series(value_series)
     if isinstance(raw_value, dict):
         value_series = pd.Series(base_series, index=index_labels).copy()
         if 'data' in raw_value:
@@ -242,7 +251,7 @@ def data_editor_to_series(raw_value, base_series, index_labels):
             else:
                 value_series = pd.Series(df.squeeze())
             value_series.index = index_labels
-            return value_series
+            return sanitize_series(value_series)
         if 'edited_rows' in raw_value:
             for row_idx, row in raw_value['edited_rows'].items():
                 if len(row) == 0:
@@ -250,8 +259,8 @@ def data_editor_to_series(raw_value, base_series, index_labels):
                 new_val = list(row.values())[0]
                 if int(row_idx) < len(index_labels):
                     value_series.iloc[int(row_idx)] = new_val
-            return value_series
-    return pd.Series([raw_value for _ in index_labels], index=index_labels)
+            return sanitize_series(value_series)
+    return sanitize_series(pd.Series([raw_value for _ in index_labels], index=index_labels))
 
 # I think we still need an "inflate amount" for tax purposes
 
