@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 
 import objs.plan 
+import objs.financial_objects
 import utils.utilities
 import utils.generators
 import utils.ui_functions
@@ -68,7 +69,8 @@ def add_asset_to_plan(asset_type,existing,down_payment_sources,session_state):
     asset_params = {'maintenance_rate':st.session_state['maintenance_rate_new'],
                     'insurance':st.session_state['insurance_new']}
     if asset_type == 'home':
-        asset_params |= {'maintenance_cap': st.session_state.get('maintenance_cap_new', 0.0)}
+        asset_params |= {'maintenance_cap': st.session_state.get('maintenance_cap_new', 0.0),
+                         'utilities': st.session_state['utilities_new']}
     
     # Add property tax for a house
     if asset_type == 'home':
@@ -255,6 +257,7 @@ def add_asset(asset_type,existing,session_state):
                             key="property_tax_rate_new")
             maintenance_default = 0.015
             insurance_default = 1500
+            utilities_default = 2400
             asset_type_ = 'Home'
             st.number_input("Maintenance Cap (Start Year $)",
                             min_value=0.0,
@@ -280,6 +283,13 @@ def add_asset(asset_type,existing,session_state):
                         value=insurance_default,
                         step=10,
                         key="insurance_new")
+
+        if asset_type == 'home':
+            st.number_input("Utilities",
+                            min_value=0,
+                            value=utilities_default,
+                            step=10,
+                            key="utilities_new")
         
         
         submit = st.form_submit_button(label="Add "+asset_type_+" + Expenses to Plan",
@@ -555,6 +565,36 @@ def generate_asset(asset_id,session_state):
                         on_change=update_asset,
                         args=[[asset_id]+paired_ids,'insurance',session_state],
                         key=f"{asset_id}_insurance")
+
+        if obj.subcategory == 'Real Estate':
+            utilities_matches = [obj_ for obj_ in st.session_state['plan'].expenses if (obj.id in [key for inner_dict in obj_.paired_attr.values() for key in inner_dict.keys()] and 'Utilities' in obj_.name)]
+            if len(utilities_matches) == 0:
+                utilities_obj = objs.financial_objects.ExpenseObj(
+                    obj.person,
+                    "Necessary",
+                    obj.name,
+                    obj.name + ' Utilities',
+                    '',
+                    st.session_state['plan'].cal_year,
+                    0,
+                    False,
+                    True,
+                    {'infl_rate': st.session_state['plan'].infl_rate,}
+                )
+                utilities_obj.future_event = obj.future_event
+                utilities_obj.paired_attr['time'] |= {asset_id:[['start_year','start_year',0],['end_year','end_year',0]]}
+                st.session_state['plan'].pairs['time'].append([asset_id,utilities_obj.id])
+                st.session_state['plan'].expenses.append(utilities_obj)
+                st.session_state['plan'] = utilities_obj.project(st.session_state['plan'])
+            else:
+                utilities_obj = utilities_matches[0]
+            st.number_input("Utilities",
+                            min_value=0.0,
+                            value=float(utilities_obj.value_input[utilities_obj.start_year]),
+                            step=10.0,
+                            on_change=update_asset,
+                            args=[[asset_id]+paired_ids,'utilities',session_state],
+                            key=f"{asset_id}_utilities")
         
         # Delete button
         if paired_liab == True:
@@ -799,9 +839,13 @@ def update_asset(id_list,attr,session_state):
         property_tax_obj = [obj for obj in st.session_state['plan'].expenses if obj.id in id_list and 'Property Tax' in obj.name][0]
         property_tax_obj.paired_attr['series'][asset_id][2] = st.session_state[f'{asset_id}_property_tax_rate']
         
-    elif attr == 'home_insurance':
+    elif attr == 'insurance':
         insurance_obj = [obj for obj in st.session_state['plan'].expenses if obj.id in id_list and 'Insurance' in obj.name][0]
-        insurance_obj.paired_attr['series'][asset_id][2] = st.session_state[f'{asset_id}_home_insurance']
+        insurance_obj.value_input = st.session_state[f'{asset_id}_insurance']
+        
+    elif attr == 'utilities':
+        utilities_obj = [obj for obj in st.session_state['plan'].expenses if obj.id in id_list and 'Utilities' in obj.name][0]
+        utilities_obj.value_input = st.session_state[f'{asset_id}_utilities']
         
     # Project liability (conditional on its existence - asset if not), which then projects all dependent objects
     # if paired_liab == True:

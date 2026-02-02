@@ -195,6 +195,27 @@ def buy_home(plan,person,start_year,value,asset_dict,liab_dict,down_payment_sour
     plan.pairs['time'].append([asset_id,insurance.id])
     plan.expenses.append(insurance)
     plan = insurance.project(plan)
+
+    # Home Utilities
+    utilities = objs.financial_objects.ExpenseObj(
+        person,
+        "Necessary",
+        plan.get_object_from_id(asset_id).name,
+        plan.get_object_from_id(asset_id).name + ' Utilities',
+        '',
+        plan.cal_year,
+        home_params['utilities'],
+        False,
+        True,
+        {'infl_rate': plan.infl_rate,}
+    )
+    # Mark as future event object if created for future purchase
+    if start_year > plan.start_year:
+        utilities.future_event = True
+    utilities.paired_attr['time'] |= {asset_id:[['start_year','start_year',0],['end_year','end_year',0]]}
+    plan.pairs['time'].append([asset_id,utilities.id])
+    plan.expenses.append(utilities)
+    plan = utilities.project(plan)
     
     # Project the home asset, triggering updates of all dependents
     plan = plan.get_object_from_id(asset_id).project(plan)
