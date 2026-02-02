@@ -264,7 +264,17 @@ def generate_asset(asset_id):
             if isinstance(prop,(list,tuple)) and len(prop) == 2:
                 prop, prop_cap = prop
             # Set both auto and manual props, and default setting
-            if isinstance(prop,pd.Series):
+            if isinstance(prop, dict):
+                prop_series = pd.Series(prop)
+                try:
+                    prop_series.index = prop_series.index.astype(int)
+                except Exception:
+                    pass
+                prop_series = utils.utilities.expand_contract(prop_series, obj.cal_year)
+                prop_auto = prop_series[obj.start_year]
+                prop_manual = prop_series
+                entry_default = 1
+            elif isinstance(prop,pd.Series):
                 prop_auto = prop[obj.start_year]
                 prop_manual = prop
                 entry_default = 1
@@ -272,6 +282,11 @@ def generate_asset(asset_id):
                 prop_auto = prop
                 prop_manual = utils.utilities.expand_contract(prop, obj.cal_year)
                 entry_default = 0
+
+            try:
+                prop_auto = float(prop_auto)
+            except Exception:
+                prop_auto = 0.0
                 
             st.selectbox(label='Proportion Entry',
                          options=['Auto','Manual'],
@@ -290,7 +305,7 @@ def generate_asset(asset_id):
                                 key=f'{asset_id}_props')
             else:
                 #obj.props = st.data_editor(obj.props.set_axis(obj.value.index.astype(str)),num_rows='fixed',key=f'{asset_id}_props').set_axis(obj.props.index)
-                save_props = st.button('Save Edits')
+                save_props = st.button('Save Edits', key=f'{asset_id}_props_save')
                 edited_props = st.data_editor(prop_manual,#obj.props.set_axis(obj.value.index.astype(str)),
                                               num_rows='fixed',
                                               use_container_width=True,

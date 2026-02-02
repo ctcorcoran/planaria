@@ -49,7 +49,10 @@ def update_expense_share():
     utils.ui_functions.sidebar_buttons(False)
     
     st.session_state['plan'].expense_share = st.session_state['plan_expense_share']
-    st.session_state['plan'].generate_expense_share()    
+    st.session_state['plan'].generate_expense_share()
+    # Reproject joint expenses so components refresh with new share props
+    for exp_obj in [obj for obj in st.session_state['plan'].expenses if obj.person == 'Joint']:
+        st.session_state['plan'] = exp_obj.project(st.session_state['plan'])
 
 # PERSON Functions
 

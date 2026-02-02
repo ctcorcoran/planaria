@@ -335,14 +335,21 @@ class Plan:
     
     def generate_expense_share(self):
         adults = [person.id for person in self.people if person.dependent == False]
-        if(self.expense_share == 'Proportional'):
+        use_income_based = self.expense_share in ['Proportional', 'Income-Based']
+        if use_income_based and len(adults) > 0:
             #self.props_input = True
             all_income = [obj.id for obj in self.income if (obj.person in adults) and (obj.category == 'Earned')]
             inc_dict = {}
             for inc_id in all_income:
                 temp = self.get_object_from_id(inc_id)
                 inc_dict |= {temp.person:temp.value}
-            self.share_props = sum([inc_dict[person] for person in inc_dict.keys() if person == 'Person_1'])/sum(inc_dict.values())
+            total_income = sum(inc_dict.values()) if len(inc_dict) > 0 else 0
+            primary_person = adults[0]
+            if total_income is None or (hasattr(total_income, "sum") and total_income.sum() == 0) or (not hasattr(total_income, "sum") and total_income == 0):
+                self.share_props = pd.Series(0.5, index=self.cal_year)
+            else:
+                primary_income = inc_dict.get(primary_person, pd.Series(0, index=self.cal_year))
+                self.share_props = primary_income / total_income
         else:
             self.share_props = pd.Series(0.5,index=self.cal_year)
         return(self)
@@ -454,6 +461,9 @@ class Plan:
         for key in ['series','time','share']:
             if key in joint_obj.paired_attr:
                 predecessor_ids += list(joint_obj.paired_attr[key].keys())
+        # Remove global pairs that include the joint and drop the joint expense
+        self.pairs = {k:[pair for pair in self.pairs[k] if joint_obj.id not in pair] for k in self.pairs.keys()}
+        self.expenses = [exp for exp in self.expenses if exp.id != joint_obj.id]
         # For each predecessor, remove pairings to the joint and restore end_year
         for pred_id in predecessor_ids:
             pred = self.get_object_from_id(pred_id)
@@ -465,10 +475,6 @@ class Plan:
             pred.end_year = int(max(pred.cal_year))
             # Reproject predecessor
             self = pred.project(self)
-        # Remove global pairs that include the joint
-        self.pairs = {k:[pair for pair in self.pairs[k] if joint_obj.id not in pair] for k in self.pairs.keys()}
-        # Remove the joint expense itself
-        self.expenses = [exp for exp in self.expenses if exp.id != joint_obj.id]
         return self
 
     def uncombine_expenses(self,obj_name_list):

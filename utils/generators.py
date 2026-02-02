@@ -393,7 +393,6 @@ def edit_child_expenses(plan,child_name,input_df):
     child = plan.get_object_from_name("Person",child_name)
     # Get Values (Single Year Ages)
     vals_dict = expand_child_costs(input_df)
-    print(vals_dict)
     
     for cat in vals_dict.keys():
         # Check if object exists already. If yes, append values to child_components attribute
@@ -401,10 +400,8 @@ def edit_child_expenses(plan,child_name,input_df):
             age_start = 6
             name = 'Education'
             if plan.get_id_from_name('Expense','Childcare','Joint') == None:
-                print('Missing Expense: Childcare')
                 return(plan)
             elif plan.get_id_from_name('Expense','Education','Joint') == None:
-                print('Missing Expense: Education')
                 return(plan)
             else:
                 expense = plan.get_object_from_name('Expense','Education','Joint')
@@ -419,7 +416,6 @@ def edit_child_expenses(plan,child_name,input_df):
             age_start = 0
             
         if plan.get_id_from_name('Expense',name,'Joint') == None:
-            print('Missing Expense: ',name)
             return(plan)
         else:
             expense = plan.get_object_from_name('Expense',name,'Joint')

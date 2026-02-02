@@ -391,6 +391,7 @@ def generate_asset(asset_id,session_state):
                             key=f"{asset_id}_present_value")
 
         # Rates
+        rate = 'Interest Rate'
         if obj.subcategory == 'Real Estate':
             st.number_input("Appreciation Rate",
                             min_value=0.0,

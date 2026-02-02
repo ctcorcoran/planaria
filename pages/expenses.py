@@ -130,7 +130,9 @@ def update_expense(expense_id,obj,attr):
 def generate_static_expense(expense_id,disp_div):    
     obj = st.session_state['plan'].get_object_from_id(expense_id)
     with st.container(border=True):
-        st.write(obj.name+' ('+st.session_state['plan'].get_object_from_id(obj.person).name +') - '+str(int(obj.value[obj.start_year]/disp_div)))
+        person_obj = st.session_state['plan'].get_object_from_id(obj.person)
+        person_name = person_obj.name if person_obj is not None else str(obj.person)
+        st.write(obj.name+' ('+person_name +') - '+str(int(obj.value[obj.start_year]/disp_div)))
     return(obj)
 
 def generate_expense(expense_id,disp_div):    

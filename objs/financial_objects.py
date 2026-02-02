@@ -214,11 +214,15 @@ class FinObj:
                         plan = self.reverse_sale(plan,end_year) # Sale is reversed, we'll make the new sale after updating
         
         # SHARE PROPS
-        # Any newly created Joint Expenses will get caught here and finish their
-        # initialization through the first update() call
+        # Joint expenses should refresh share proportions when plan settings change
         if self.obj_type == 'Expense' and self.person == 'Joint':
+            # Always recompute share proportions from current plan settings/income
+            plan = plan.generate_expense_share()
             if 'share_props' not in self.__dict__.keys():
                 self = self.set_props(plan)
+            else:
+                self.share_props = plan.share_props
+            self = self.adjust_share()
 
 
                 # Update (inflate for income/expenses, update for assets, amort_annual for liabilities)
