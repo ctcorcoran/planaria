@@ -47,6 +47,10 @@ if 'sankey_comb' not in st.session_state:
     st.session_state['sankey_comb'] = False
 if 'sankey_norm' not in st.session_state:
     st.session_state['sankey_norm'] = False
+if 'budget_include_taxes' not in st.session_state:
+    st.session_state['budget_include_taxes'] = True
+if 'budget_table_display' not in st.session_state:
+    st.session_state['budget_table_display'] = 'Annual'
 
 # Sidebar
 utils.ui_functions.make_sidebar()
@@ -78,11 +82,19 @@ with budget_tab:
                                                    st.session_state['budget_display_person'],
                                                    st.session_state['budget_display_year'],
                                                    statement_type='cashflow')
+        if st.session_state['budget_table_display'] == 'Monthly':
+            budget = budget.copy()
+            value_num = pd.to_numeric(budget['value'], errors='coerce')
+            value_num = (value_num / 12).round(-1)
+            budget['value'] = value_num.where(value_num.notna(), '')
         st.dataframe(budget,hide_index=True,use_container_width=True)
     with col2:
+        st.checkbox('Include Taxes in Sunburst', key='budget_include_taxes')
+        st.selectbox('Table Values', options=['Annual','Monthly'], key='budget_table_display')
         st.plotly_chart(st.session_state['plan'].pie_chart('expenses',
                                                           st.session_state['budget_display_year'],
                                                           'sunburst',
+                                                          cats_to_ignore=[] if st.session_state['budget_include_taxes'] else ['Tax'],
                                                           person=st.session_state['budget_display_person']))
 
 with sankey_tab:
